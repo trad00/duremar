@@ -6,7 +6,6 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 
-
 namespace config {
 
 enum enTYPES {NONE, STRING, INT, FLOAT, ONOFF, ENWFM, RELM, SNSNO, CMPOPER};
@@ -30,36 +29,40 @@ void initConfig() {
   conf["wifiMode"] = AP;
   
   conf["1/mode"] = OFF;
-  conf["1/on/sensor"] = NA;
+  conf["1/on/sensor"] = T1;
   conf["1/on/oper"] = LESS;
   conf["1/on/temp"] = 78.3;
-  conf["1/off/sensor"] = NA;
+  conf["1/off/sensor"] = T1;
   conf["1/off/oper"] = MORE;
   conf["1/off/temp"] = 78.4;
+  conf["1/atmCorr"] = -0.03;
   
   conf["2/mode"] = OFF;
-  conf["2/on/sensor"] = NA;
+  conf["2/on/sensor"] = T2;
   conf["2/on/oper"] = LESS;
   conf["2/on/temp"] = 80.0;
-  conf["2/off/sensor"] = NA;
+  conf["2/off/sensor"] = T2;
   conf["2/off/oper"] = MORE;
   conf["2/off/temp"] = 81.0;
+  conf["2/atmCorr"] = -0.03;
   
   conf["3/mode"] = OFF;
-  conf["3/on/sensor"] = NA;
+  conf["3/on/sensor"] = T3;
   conf["3/on/oper"] = LESS;
   conf["3/on/temp"] = 90.0;
-  conf["3/off/sensor"] = NA;
+  conf["3/off/sensor"] = T3;
   conf["3/off/oper"] = MORE;
   conf["3/off/temp"] = 91.0;
+  conf["3/atmCorr"] = -0.03;
   
   conf["4/mode"] = OFF;
-  conf["4/on/sensor"] = NA;
+  conf["4/on/sensor"] = T4;
   conf["4/on/oper"] = LESS;
   conf["4/on/temp"] = 99.0;
-  conf["4/off/sensor"] = NA;
+  conf["4/off/sensor"] = T4;
   conf["4/off/oper"] = MORE;
   conf["4/off/temp"] = 100.0;
+  conf["4/atmCorr"] = -0.03;
 
   conf["1/on/timeMM"] = 0;
   conf["1/on/timeSS"] = 0;
@@ -304,28 +307,47 @@ void ExitNoSaveSelect(MenuItemBase* menuItem) {
 }
 
 
-ConfigItem* newSettingItem(String title) {
+ConfigItem* newCalibrateItem(String title) {
+  ConfigItem* item = new ConfigItem(title, "calibrate/" + title, FLOAT, FloatDataSelect); //num +/-NN.NN
+  item->floatPrec = 2;
+  return item;
+}
+
+ConfigItem* newCalibrateGroupItem(String title) {
   ConfigItem* item = new ConfigItem(title);
-  item->subItems.push_back(new ConfigItem("<<BACK", true));
-  item->subItems.push_back(new ConfigItem("sound", "soundOn", ONOFF, SoundSelect));             //on/off
-  item->subItems.push_back(new ConfigItem("backlight", "backlightOn", ONOFF, BacklightSelect)); //on/off
-  item->subItems.push_back(new ConfigItem("wifi mode", "wifiMode", ENWFM, WiFiModeSelect));     //enum AP/STA
+  item->subItems.push_back(newCalibrateItem("T1"));
+  item->subItems.push_back(newCalibrateItem("T2"));
+  item->subItems.push_back(newCalibrateItem("T3"));
+  item->subItems.push_back(newCalibrateItem("T4"));
   item->subItems.push_back(new ConfigItem("<<BACK", true));
   return item;
 }
+
+ConfigItem* newSettingItem(String title) {
+  ConfigItem* item = new ConfigItem(title);
+  item->subItems.push_back(new ConfigItem("<<BACK", true));
+  item->subItems.push_back(newCalibrateGroupItem("Calibrate"));
+  item->subItems.push_back(new ConfigItem("Sound", "soundOn", ONOFF, SoundSelect));             //on/off
+  item->subItems.push_back(new ConfigItem("Backlight", "backlightOn", ONOFF, BacklightSelect)); //on/off
+  item->subItems.push_back(new ConfigItem("WiFi mode", "wifiMode", ENWFM, WiFiModeSelect));     //enum AP/STA
+  item->subItems.push_back(new ConfigItem("Reset to Default", DefaultSelect));
+  item->subItems.push_back(new ConfigItem("<<BACK", true));
+  return item;
+}
+
 ConfigItem* newOnOffItem(String title, String path) {
   ConfigItem* item = new ConfigItem(title);
   item->subItems.push_back(new ConfigItem("<<BACK", true));
-  item->subItems.push_back(new ConfigItem("sensor", path + "/sensor", SNSNO, SensorSelect));   //enum T1/T2/T3/T4
-  item->subItems.push_back(new ConfigItem("oper", path + "/oper", CMPOPER, OperSelect));       //enum >/<
-  item->subItems.push_back(new ConfigItem("temp", path + "/temp", FLOAT, FloatDataSelect));    //num -100 .. +150
+  item->subItems.push_back(new ConfigItem("Sensor", path + "/sensor", SNSNO, SensorSelect));   //enum T1/T2/T3/T4
+  item->subItems.push_back(new ConfigItem("Oper", path + "/oper", CMPOPER, OperSelect));       //enum >/<
+  item->subItems.push_back(new ConfigItem("Temp", path + "/temp", FLOAT, FloatDataSelect));    //num -100 .. +150
 
-  ConfigItem* subItem = new ConfigItem("time MM", path + "/timeMM", INT, IntDataSelect);       //num 0 .. 240
+  ConfigItem* subItem = new ConfigItem("Time MM", path + "/timeMM", INT, IntDataSelect);       //num 0 .. 240
   subItem->intMin = 0;
   subItem->intMax = 240;
   item->subItems.push_back(subItem);
 
-  subItem = new ConfigItem("time SS", path + "/timeSS", INT, IntDataSelect);       //num 0 .. 60
+  subItem = new ConfigItem("Time SS", path + "/timeSS", INT, IntDataSelect);       //num 0 .. 60
   subItem->intMin = 0;
   subItem->intMax = 60;
   item->subItems.push_back(subItem);
@@ -333,6 +355,7 @@ ConfigItem* newOnOffItem(String title, String path) {
   item->subItems.push_back(new ConfigItem("<<BACK", true));
   return item;
 }
+
 ConfigItem* newRelayItem(String title, String path) {
   ConfigItem* item = new ConfigItem(title);
   item->subItems.push_back(new ConfigItem("<<BACK", true));
@@ -340,7 +363,7 @@ ConfigItem* newRelayItem(String title, String path) {
   item->subItems.push_back(newOnOffItem("ON rule", path + "/on"));
   item->subItems.push_back(newOnOffItem("OFF rule", path + "/off"));
   
-  ConfigItem* subItem = new ConfigItem("Atm Correct", path + "/mode", FLOAT, FloatDataSelect); //num +/-NN.NN
+  ConfigItem* subItem = new ConfigItem("Atm Correct", path + "/atmCorr", FLOAT, FloatDataSelect); //num +/-NN.NN
   subItem->floatPrec = 2;
   item->subItems.push_back(subItem);
   
@@ -350,12 +373,12 @@ ConfigItem* newRelayItem(String title, String path) {
 
 void buildMenu(ConfigItem& menu) {
 //  menu.subItems.push_back(new ConfigItem("Start/Stop"));
+  menu.subItems.push_back(new ConfigItem("EXIT w/o save", ExitNoSaveSelect));
   menu.subItems.push_back(newRelayItem("RELAY 1", "1"));
   menu.subItems.push_back(newRelayItem("RELAY 2", "2"));
   menu.subItems.push_back(newRelayItem("RELAY 3", "3"));
   menu.subItems.push_back(newRelayItem("RELAY 4", "4"));
   menu.subItems.push_back(newSettingItem("SETTINGS"));
-  menu.subItems.push_back(new ConfigItem("Reset to Default", DefaultSelect));
   menu.subItems.push_back(new ConfigItem("SAVE and exit", SaveExitSelect));
   menu.subItems.push_back(new ConfigItem("EXIT w/o save", ExitNoSaveSelect));
 }
@@ -397,4 +420,5 @@ void buttonPressed(Button2& btn) {
 }
 
 } //namespace
+
 #endif
