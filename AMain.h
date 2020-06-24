@@ -144,15 +144,15 @@ void draw(bool redraw = false) {
 //      lcd.clear();
       
       lcd.setCursor(0, 0);
-      lcd.print("atm T ");
+      lcd.print("Atm T ");
       lcd.print(fmtTemperature(bmp_t, 1));
       
       lcd.setCursor(0, 1);
-      lcd.print("atm P ");
+      lcd.print("Atm P ");
       lcd.print(fmtPressure(bmp_prs_mmHg, 1));
       
       lcd.setCursor(0, 2);
-      lcd.print("alt   ");
+      lcd.print("Alt   ");
       lcd.print(fmtAlt(bmp_alt, 1));
 
       parameterSet1();
