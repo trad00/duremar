@@ -6,7 +6,6 @@
 #include "Config.h"
 #include "AMain.h"
 
-
 enum MODES { MAIN, CONFIG };
 MODES mode = MAIN;
 //MODES mode = CONFIG;

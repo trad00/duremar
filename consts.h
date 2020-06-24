@@ -8,6 +8,7 @@
 #define BMP_SDA_BUS D2
 #define BMP_SCL_BUS D1
 #define BMP_PRESSURE0 1013.25
+
 #define DS18_RESOLUTION 9
 
 const float emptySignal = -127;

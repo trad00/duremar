@@ -6,7 +6,6 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 
-
 namespace config {
 
 enum enTYPES {NONE, STRING, INT, FLOAT, ONOFF, ENWFM, RELM, SNSNO, CMPOPER};

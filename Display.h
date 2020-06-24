@@ -4,7 +4,6 @@
 #include "MenuNavigate.h"
 #include <LiquidCrystal_PCF8574.h>
 
-
 class MenuDisplayPCF8574 : public IMenuDisplay {
   #define LCD_COLS 20
   #define LCD_ROWS 4

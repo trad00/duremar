@@ -7,7 +7,6 @@
 #include <Adafruit_BMP280.h>
 #include <LiquidCrystal_PCF8574.h>
 
-
 namespace main {
 
 OneWire oneWire(ONE_WIRE_BUS);

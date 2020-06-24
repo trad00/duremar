@@ -3,7 +3,6 @@
 
 #include <vector> 
 
-
 class MenuItemBase;
 
 class IMenuDisplay {
