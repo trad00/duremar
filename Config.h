@@ -10,7 +10,7 @@ namespace config {
 
 enum enTYPES {NONE, STRING, INT, FLOAT, ONOFF, ENWFM, RELM, SNSNO, CMPOPER};
 enum enWIFIMODE {AP, STA};
-enum enRELMODE {AUTO, ON, OFF};
+enum enRELMODE {AUTO, rmON, rmOFF};
 enum enSENSNO {NA, T1, T2, T3, T4};
 enum enOPER {LESS, MORE};
 
@@ -27,8 +27,9 @@ void initConfig() {
   conf["soundOn"] = true;
   conf["backlightOn"] = true;
   conf["wifiMode"] = AP;
+  conf["normalPressure"] = 760;
   
-  conf["1/mode"] = OFF;
+  conf["1/mode"] = AUTO;
   conf["1/on/sensor"] = T1;
   conf["1/on/oper"] = LESS;
   conf["1/on/temp"] = 78.3;
@@ -37,7 +38,7 @@ void initConfig() {
   conf["1/off/temp"] = 78.4;
   conf["1/atmCorr"] = -0.03;
   
-  conf["2/mode"] = OFF;
+  conf["2/mode"] = rmOFF;
   conf["2/on/sensor"] = T2;
   conf["2/on/oper"] = LESS;
   conf["2/on/temp"] = 80.0;
@@ -46,7 +47,7 @@ void initConfig() {
   conf["2/off/temp"] = 81.0;
   conf["2/atmCorr"] = -0.03;
   
-  conf["3/mode"] = OFF;
+  conf["3/mode"] = rmOFF;
   conf["3/on/sensor"] = T3;
   conf["3/on/oper"] = LESS;
   conf["3/on/temp"] = 90.0;
@@ -55,7 +56,7 @@ void initConfig() {
   conf["3/off/temp"] = 91.0;
   conf["3/atmCorr"] = -0.03;
   
-  conf["4/mode"] = OFF;
+  conf["4/mode"] = rmOFF;
   conf["4/on/sensor"] = T4;
   conf["4/on/oper"] = LESS;
   conf["4/on/temp"] = 99.0;
@@ -96,8 +97,6 @@ void loadConfig() {
 }
 //*****************
 
-
-  
 class ConfigItem : public MenuItemBase {
   public:
     ConfigItem(String title) : MenuItemBase(title) {};
@@ -127,9 +126,11 @@ class ConfigItem : public MenuItemBase {
         case FLOAT: {
           float val = conf[dataPath];
           String strVal = String(val, floatPrec);
-          if (val > 0)
+          
+          float rVal = roundPrec(val, floatPrec);
+          if (rVal > 0)
             strVal = "+" + strVal;
-          else if (val == 0.00)
+          else if (rVal == 0)
             strVal = " " + strVal;
           return strVal;
         }
@@ -141,9 +142,9 @@ class ConfigItem : public MenuItemBase {
           switch ((enRELMODE)conf[dataPath]) {
             case AUTO:
               return "AUTO";
-            case ON:
+            case rmON:
               return "ON";
-            case OFF:
+            case rmOFF:
               return "OFF";
             default:
               return "";
@@ -200,10 +201,10 @@ void RelayModeSelect(MenuItemBase* menuItem) {
   ConfigItem* item = static_cast<ConfigItem*>(menuItem);
   switch ((enRELMODE)conf[item->dataPath]) {
     case AUTO:
-      conf[item->dataPath] = ON;
+      conf[item->dataPath] = rmON;
       break;
-    case ON:
-      conf[item->dataPath] = OFF;
+    case rmON:
+      conf[item->dataPath] = rmOFF;
       break;
     default:
       conf[item->dataPath] = AUTO;
@@ -327,6 +328,7 @@ ConfigItem* newSettingItem(String title) {
   ConfigItem* item = new ConfigItem(title);
   item->subItems.push_back(new ConfigItem("<<BACK", true));
   item->subItems.push_back(newCalibrateGroupItem("Calibrate"));
+  item->subItems.push_back(new ConfigItem("Norm atm prs", "normalPressure", FLOAT, FloatDataSelect));
   item->subItems.push_back(new ConfigItem("Sound", "soundOn", ONOFF, SoundSelect));             //on/off
   item->subItems.push_back(new ConfigItem("Backlight", "backlightOn", ONOFF, BacklightSelect)); //on/off
   item->subItems.push_back(new ConfigItem("WiFi mode", "wifiMode", ENWFM, WiFiModeSelect));     //enum AP/STA
@@ -384,11 +386,11 @@ void buildMenu(ConfigItem& menu) {
 }
 
 void setup(uint8_t buzPin, OnConfigExitFunc* onCfgExit) {
-  initConfig();
-  loadConfig();
-  
   buzzerPin = buzPin;
   onConfigExit = onCfgExit;
+
+  initConfig();
+  loadConfig();
   buildMenu(menu);
 }
 

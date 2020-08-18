@@ -22,19 +22,21 @@ bool bmpBegan;
 unsigned long lastUpdate = 0;
 unsigned long updateInterval = 5000;
 
+unsigned long lastUpdateTimer = 0;
+unsigned long updateIntervalTimer = 1000;
 
-float _t[4];
-double _bmp_t;
-double _bmp_prs_Pa;
-double _bmp_prs_mmHg;
-double _bmp_alt;
 
-float t[4] = {emptySignal,emptySignal,emptySignal,emptySignal};
-float clb_t[4] = {0,0,0,0};
-double bmp_t = emptySignal;
-double bmp_prs_Pa = emptySignal;
-double bmp_prs_mmHg = emptySignal;
-double bmp_alt = emptySignal;
+float _temps[4];
+double _atm_t;
+double _atm_prs_mmHg;
+double _bar_alt;
+bool _rOn[4];
+
+float temps[4] = {emptySignal,emptySignal,emptySignal,emptySignal};
+float clb_temps[4] = {0,0,0,0};
+double atm_t = emptySignal;
+double atm_prs_mmHg = emptySignal;
+double bar_alt = emptySignal;
 
 void setSound(uint8_t pin, bool on) {
   pinSound = pin;
@@ -80,37 +82,191 @@ String fmtAlt(float val, int decPlc) {
   return fmtFloatValue(val, decPlc, " m  ");
 }
 
+class RelayActuator {
+public:
+  RelayActuator(uint8_t chan) {
+    pref = String(chan);
+    switch(chan) {
+      case 1:
+        pin = RELAY1;
+        break;
+      case 2:
+        pin = RELAY2;
+        break;
+      case 3:
+        pin = RELAY3;
+        break;
+      default:
+        pin = RELAY4;
+    }
+  }
+  
+  void init() {
+    relMode = config::conf[pref + "/mode"];
+    
+    tOnSet = isSet(config::conf[pref + "/on/sensor"], tOnIndex);
+    operOn = config::conf[pref + "/on/oper"];
+    tempOn = config::conf[pref + "/on/temp"];
+    timeMMOn = config::conf[pref + "/on/timeMM"];
+    timeSSOn = config::conf[pref + "/on/timeSS"];
+    
+    tOffSet = isSet(config::conf[pref + "/off/sensor"], tOffIndex);
+    operOff = config::conf[pref + "/off/oper"];
+    tempOff = config::conf[pref + "/off/temp"];
+    timeMMOff = config::conf[pref + "/off/timeMM"];
+    timeSSOff = config::conf[pref + "/off/timeSS"];
+    
+    normP = config::conf["normalPressure"];
+    atmCorr = config::conf[pref + "atmCorr"];
+  }
+  
+  void actuate() {
+    switch (relMode) {
+      case config::rmON:
+        digitalWrite(pin, REL_ON);
+        break;
+      case config::rmOFF:
+        digitalWrite(pin, REL_OFF);
+        break;
+      default: {
+        if (tOnSet) {
+          float temp = getTempSensor(tOnIndex);
+          if (operOn == config::MORE && temp > tempOn || operOn == config::LESS && temp < tempOn) {
+            if (digitalRead(pin) == REL_OFF) {
+              digitalWrite(pin, REL_ON);
+              timeOn = millis();
+            }
+          }
+        }
+        if (tOffSet) {
+          float temp = getTempSensor(tOffIndex);
+          if (operOff == config::MORE && temp > tempOff || operOff == config::LESS && temp < tempOff) {
+            if (digitalRead(pin) == REL_ON) {
+              digitalWrite(pin, REL_OFF);
+              timeOff = millis();
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  void timerCheck() {
+    if (tOnSet && (timeMMOn != 0 || timeSSOn != 0)) {
+      if (millis()-timeOn > (timeMMOn*60 + timeSSOn)*1000) {
+        if (digitalRead(pin) == REL_ON) {
+          digitalWrite(pin, REL_OFF);
+        }
+      }
+    }
+    if (tOffSet && (timeMMOff != 0 || timeSSOff != 0)) {
+      if (millis()-timeOff > (timeMMOff*60 + timeSSOff)*1000) {
+        if (digitalRead(pin) == REL_OFF) {
+          digitalWrite(pin, REL_ON);
+        }
+      }
+    }
+  }
+  
+  inline uint8_t getPin() {
+    return pin;
+  }
+  
+private:
+  float getTempSensor(uint8_t tIndex) {
+    float temp = temps[tIndex];
+    if (temp != emptySignal && atm_prs_mmHg != emptySignal) {
+      temp += atmCorr * (atm_prs_mmHg - normP);
+    }
+    temp = roundPrec(temp, 1);
+    return temp;
+  }
+  bool isSet(config::enSENSNO no, uint8_t& tIndex) {
+    switch(no) {
+      case config::T1:
+        tIndex = 0;
+        return true;
+      case config::T2:
+        tIndex = 1;
+        return true;
+      case config::T3:
+        tIndex = 2;
+        return true;
+      case config::T4:
+        tIndex = 3;
+        return true;
+    }
+    return false;
+  }
+  
+private:
+  config::enRELMODE relMode;
+
+  bool tOnSet;
+  uint8_t tOnIndex;
+  config::enOPER operOn;
+  float tempOn;
+  unsigned long timeOn;
+  int timeMMOn;
+  int timeSSOn;
+  int timeMMOff;
+  int timeSSOff;
+  
+  bool tOffSet;
+  uint8_t tOffIndex;
+  config::enOPER operOff;
+  float tempOff;
+  unsigned long timeOff;
+  
+  float normP;
+  float atmCorr;
+  
+  uint8_t pin;
+  String pref;
+};
+
+RelayActuator ra[4] = {(1),(2),(3),(4)};;
+
 void parameterReset() {
-  _t[0] = emptySignal;
-  _t[1] = emptySignal;
-  _t[2] = emptySignal;
-  _t[3] = emptySignal;
-  _bmp_t = emptySignal;
-//  _bmp_prs_Pa = emptySignal;
-  _bmp_prs_mmHg = emptySignal;
-  _bmp_alt = emptySignal;
+  for (uint8_t i=0; i<4; i++)
+    _temps[i] = emptySignal;
+
+  _atm_t = emptySignal;
+  _atm_prs_mmHg = emptySignal;
+  _bar_alt = emptySignal;
+  
+  for (uint8_t i=0; i<4; i++)
+    _rOn[i] = digitalRead(ra[i].getPin()) == REL_ON;
 }
 
 void parameterSet0() {
-  _t[0] = t[0];
-  _t[1] = t[1];
-  _t[2] = t[2];
-  _t[3] = t[3];
+  for (uint8_t i=0; i<4; i++)
+    _temps[i] = temps[i];
+    
+  for (uint8_t i=0; i<4; i++)
+    _rOn[i] = digitalRead(ra[i].getPin()) == REL_ON;
 }
 
 void parameterSet1() {
-  _bmp_t = roundFloat(bmp_t, 1);
-//  _bmp_prs_Pa = roundFloat(bmp_prs_Pa, 1);
-  _bmp_prs_mmHg = roundFloat(bmp_prs_mmHg, 1);
-  _bmp_alt = roundFloat(bmp_alt, 1);
+  _atm_t = roundFloat(atm_t, 1);
+  _atm_prs_mmHg = roundFloat(atm_prs_mmHg, 1);
+  _bar_alt = roundFloat(bar_alt, 1);
 }
 
 bool parameterCompare0() {
-  return _t[0] != t[0] || _t[1] != t[1] || _t[2] != t[2] || _t[3] != t[3];
+  for (uint8_t i=0; i<4; i++)
+    if (_temps[i] != temps[i])
+      return true;
+    
+  for (uint8_t i=0; i<4; i++)
+    if (_rOn[i] != (digitalRead(ra[i].getPin()) == REL_ON))
+      return true;
+      
+  return false;
 }
 
 bool parameterCompare1() {
-  return _bmp_t != roundFloat(bmp_t, 1) || _bmp_prs_mmHg != roundFloat(bmp_prs_mmHg, 1) || _bmp_alt != roundFloat(bmp_alt, 1);
+  return _atm_t != roundFloat(atm_t, 1) || _atm_prs_mmHg != roundFloat(atm_prs_mmHg, 1) || _bar_alt != roundFloat(bar_alt, 1);
 }
 
 void draw(bool redraw = false) {
@@ -119,41 +275,35 @@ void draw(bool redraw = false) {
     
   if (page == 0) {
     if (redraw || parameterCompare0()) {
-//      lcd.clear();
-      
-      lcd.setCursor(0, 0);
-      lcd.print("T1 ");
-      lcd.print(fmtTemperature(t[0], 2));
-      
-      lcd.setCursor(0, 1);
-      lcd.print("T2 ");
-      lcd.print(fmtTemperature(t[1], 2));
-      
-      lcd.setCursor(0, 2);
-      lcd.print("T3 ");
-      lcd.print(fmtTemperature(t[2], 2));
-      
-      lcd.setCursor(0, 3);
-      lcd.print("T4 ");
-      lcd.print(fmtTemperature(t[3], 2));
-      
+      for (uint8_t i=0; i<4; i++) {
+        lcd.setCursor(0, i);
+        lcd.print("T" + String(i+1));
+        lcd.setCursor(3, i);
+        lcd.print(fmtTemperature(temps[i], 1));
+      }
+      for (uint8_t i=0; i<4; i++) {
+        bool relOn = digitalRead(ra[i].getPin()) == REL_ON;
+        lcd.setCursor(13, i);
+        lcd.print("R" + String(i+1));
+        lcd.setCursor(16, i);
+        lcd.print(relOn ? "ON ": "OFF");
+      }
       parameterSet0();
     }
   } else if (page == 1) {
     if (redraw || parameterCompare1()) {
-//      lcd.clear();
       
       lcd.setCursor(0, 0);
       lcd.print("Atm T ");
-      lcd.print(fmtTemperature(bmp_t, 1));
+      lcd.print(fmtTemperature(atm_t, 1));
       
       lcd.setCursor(0, 1);
       lcd.print("Atm P ");
-      lcd.print(fmtPressure(bmp_prs_mmHg, 1));
+      lcd.print(fmtPressure(atm_prs_mmHg, 1));
       
       lcd.setCursor(0, 2);
       lcd.print("Alt   ");
-      lcd.print(fmtAlt(bmp_alt, 1));
+      lcd.print(fmtAlt(bar_alt, 1));
 
       parameterSet1();
     }
@@ -162,6 +312,28 @@ void draw(bool redraw = false) {
 
 void backlight(uint8_t backlightOn) {
   lcd.setBacklight(backlightOn);
+}
+
+void nextPage() {
+  page = 1 - page;
+  draw(true);
+  doSound(100, 5);
+}
+
+void prevPage() {
+  page = 1 - main::page;
+  draw(true);
+  doSound(100, 5);
+}
+
+void actuate() {
+    for (uint8_t i=0; i<4; i++)
+      ra[i].actuate();
+}
+
+void timerCheck() {
+    for (uint8_t i=0; i<4; i++)
+      ra[i].timerCheck();
 }
 
 
@@ -191,39 +363,45 @@ void startAllSensors() {
 void readAllSensors() {
   //DS18B20
   sensors.requestTemperatures(); 
-  t[0] = sensors.getTempCByIndex(0) + clb_t[0];
-  t[1] = sensors.getTempCByIndex(1) + clb_t[1];
-  t[2] = sensors.getTempCByIndex(2) + clb_t[2];
-  t[3] = sensors.getTempCByIndex(3) + clb_t[3];
+  for (uint8_t i=0; i<4; i++)
+    temps[i] = sensors.getTempCByIndex(i) + clb_temps[i];
 
   //BMP280
   if (bmpBegan) {
-    bmp_t = bmp.readTemperature();
-    bmp_prs_Pa = bmp.readPressure();
-    bmp_prs_mmHg = bmp_prs_Pa * 0.00750062; // Pa to mmHg
-    bmp_alt = bmp.readAltitude(BMP_PRESSURE0);
+    atm_t = bmp.readTemperature();
+    double atm_prs_Pa = bmp.readPressure();
+    atm_prs_mmHg = atm_prs_Pa * 0.00750062; // Pa to mmHg
+    bar_alt = bmp.readAltitude(BMP_PRESSURE0);
   }
 }
 
 void setup() {
   parameterReset();
   startAllSensors();
+  lcd.begin(LCD_COLS, LCD_ROWS);
 }
 
 void init() {
   lcd.setBacklight(config::conf["backlightOn"]);
   setSound(BUZZER, config::conf["soundOn"]);
-  clb_t[0] = config::conf["calibrate/T1"];
-  clb_t[1] = config::conf["calibrate/T2"];
-  clb_t[2] = config::conf["calibrate/T3"];
-  clb_t[3] = config::conf["calibrate/T4"];
+
+  for (uint8_t i=0; i<4; i++)
+    clb_temps[i] = config::conf["calibrate/T" + String(i+1)];
+  
+  for (uint8_t i=0; i<4; i++)
+    ra[i].init();
 }
 
-void actuate() {
-  
+void begin() {
+  readAllSensors();
+  actuate();
 }
 
 void loop() {
+  if ((millis() - lastUpdateTimer >= updateIntervalTimer) || lastUpdateTimer == 0) {
+    lastUpdateTimer = millis();
+    timerCheck();
+  }
   if ((millis() - lastUpdate >= updateInterval) || lastUpdate == 0) {
     lastUpdate = millis();
     readAllSensors();
@@ -231,6 +409,18 @@ void loop() {
   }
 }
 
+void welcome() {
+  lcd.clear();
+  lcd.setCursor(4,0);
+  lcd.print("Duremar 4.0");
+  lcd.setCursor(0,1);
+  lcd.print("Hello from Valerich!");
+  lcd.setCursor(0,2);
+  lcd.print("(c) trad00@yandex.ru");
+  lcd.setCursor(8,3);
+  lcd.print("2020");
+  delay(3000);
+}
 } //namespace
 
 #endif

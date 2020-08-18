@@ -3,6 +3,7 @@
 
 #include "consts.h"
 #include "pitches.h"
+#include "common.h"
 #include "Config.h"
 #include "AMain.h"
 
@@ -17,9 +18,7 @@ void onEncLeft(ESPRotary& rotary) {
   if (mode == CONFIG)
     config::onEncLeft(rotary);
   else {
-    main::page = 1 - main::page;
-    main::draw(true);
-    main::doSound(100, 5);
+    main::nextPage();
   }
 }
 
@@ -27,9 +26,7 @@ void onEncRight(ESPRotary& rotary) {
   if (mode == CONFIG)
     config::onEncRight(rotary);
   else {
-    main::page = 1 - main::page;
-    main::draw(true);
-    main::doSound(100, 5);
+    main::prevPage();
   }
 }
 
@@ -56,6 +53,15 @@ void setup() {
   pinMode(ENC_B, INPUT_PULLUP);
   pinMode(ENC_BTN, INPUT_PULLUP);
   pinMode(BUZZER, OUTPUT);
+  
+  pinMode(RELAY1, OUTPUT);
+  pinMode(RELAY2, OUTPUT);
+  pinMode(RELAY3, OUTPUT);
+  pinMode(RELAY4, OUTPUT);
+  digitalWrite(RELAY1, REL_OFF);
+  digitalWrite(RELAY2, REL_OFF);
+  digitalWrite(RELAY3, REL_OFF);
+  digitalWrite(RELAY4, REL_OFF);
 
   button.setPressedHandler(buttonPressed);
   rotary.setRightRotationHandler(onEncRight);
@@ -65,6 +71,8 @@ void setup() {
 
   main::setup();
   main::init();
+  main::welcome();
+  main::begin();
   
   if (mode == CONFIG)
     config::begin();
@@ -75,11 +83,22 @@ void setup() {
 //    startMelodyPlay();
 }
 
+unsigned long lastRedrawTimer = 0;
+unsigned long redrawIntervalTimer = 10000;
+bool getRedraw() {
+  if ((millis() - lastRedrawTimer >= redrawIntervalTimer) || lastRedrawTimer == 0) {
+    lastRedrawTimer = millis();
+    //защита от сбоя экрана при помехах - перерисовка
+    return true;
+  }
+  return false;
+}
+
 void loop() {
   rotary.loop();
   button.loop();
   if (mode == MAIN){
     main::loop();
-    main::draw();
+    main::draw(getRedraw());
   }
 }
