@@ -373,7 +373,7 @@ ConfigItem* newOnOffItem(String title, String path) {
 ConfigItem* newRelayItem(String title, String path) {
   ConfigItem* item = new ConfigItem(title);
   item->subItems.push_back(new ConfigItem("<<BACK", true));
-  item->subItems.push_back(new ConfigItem("Mode", path + "/mode", RELM, RelayModeSelect));     //enum Auto/On/Off
+  item->subItems.push_back(new ConfigItem("Mode", path + "/mode", RELM, RelayModeSelect)); //enum Auto/On/Off
   item->subItems.push_back(newOnOffItem("ON rule", path + "/on"));
   item->subItems.push_back(newOnOffItem("OFF rule", path + "/off"));
   
@@ -381,7 +381,7 @@ ConfigItem* newRelayItem(String title, String path) {
   subItem->floatPrec = 2;
   item->subItems.push_back(subItem);
   
-  item->subItems.push_back(new ConfigItem("Sound Alarm", path + "/sound", ONOFF, SoundAlarmSelect));             //on/off
+  item->subItems.push_back(new ConfigItem("Sound Alarm", path + "/sound", ONOFF, SoundAlarmSelect)); //on/off
   
   item->subItems.push_back(new ConfigItem("<<BACK", true));
   return item;
