@@ -26,7 +26,7 @@ bool soundOn;
 bool bmpBegan;
 
 unsigned long lastUpdate = 0;
-unsigned long updateInterval = 3000;
+unsigned long updateInterval = 5000;
 
 unsigned long lastUpdateTimer = 0;
 unsigned long updateIntervalTimer = 1000;
@@ -432,7 +432,6 @@ void welcome(bool startMelody) {
     startMelodyPlay();
   else
     delay(3000);
-//  delay(2000);
 }
 } //namespace
 

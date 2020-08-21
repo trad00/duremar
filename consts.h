@@ -1,5 +1,5 @@
-#define VER "v.2020/08/21"
-//#define LCDDisplay
+#define VER "v.2020/08/22"
+#define LCDDisplay
 
 
 #define TX 1

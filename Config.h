@@ -388,7 +388,6 @@ ConfigItem* newRelayItem(String title, String path) {
 }
 
 void buildMenu(ConfigItem& menu) {
-//  menu.subItems.push_back(new ConfigItem("Start/Stop"));
   menu.subItems.push_back(new ConfigItem("EXIT w/o save", ExitNoSaveSelect));
   menu.subItems.push_back(newRelayItem("RELAY 1", "1"));
   menu.subItems.push_back(newRelayItem("RELAY 2", "2"));
