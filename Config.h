@@ -29,7 +29,7 @@ void initConfig() {
   conf["wifiMode"] = AP;
   conf["normalPressure"] = 760;
   
-  conf["1/mode"] = AUTO;
+  conf["1/mode"] = rmOFF;
   conf["1/on/sensor"] = T1;
   conf["1/on/oper"] = LESS;
   conf["1/on/temp"] = 78.3;
@@ -37,6 +37,7 @@ void initConfig() {
   conf["1/off/oper"] = MORE;
   conf["1/off/temp"] = 78.4;
   conf["1/atmCorr"] = -0.03;
+  conf["1/sound"] = false;
   
   conf["2/mode"] = rmOFF;
   conf["2/on/sensor"] = T2;
@@ -46,6 +47,7 @@ void initConfig() {
   conf["2/off/oper"] = MORE;
   conf["2/off/temp"] = 81.0;
   conf["2/atmCorr"] = -0.03;
+  conf["2/sound"] = false;
   
   conf["3/mode"] = rmOFF;
   conf["3/on/sensor"] = T3;
@@ -55,6 +57,7 @@ void initConfig() {
   conf["3/off/oper"] = MORE;
   conf["3/off/temp"] = 91.0;
   conf["3/atmCorr"] = -0.03;
+  conf["3/sound"] = false;
   
   conf["4/mode"] = rmOFF;
   conf["4/on/sensor"] = T4;
@@ -64,6 +67,7 @@ void initConfig() {
   conf["4/off/oper"] = MORE;
   conf["4/off/temp"] = 100.0;
   conf["4/atmCorr"] = -0.03;
+  conf["4/sound"] = false;
 
   conf["1/on/timeMM"] = 0;
   conf["1/on/timeSS"] = 0;
@@ -170,10 +174,12 @@ class ConfigItem : public MenuItemBase {
     }
 };
 
-class ConfigDisplay : public MenuDisplayPCF8574 {
-};
+#ifdef LCDDisplay
+MenuDisplayPCF8574 disp;
+#else
+MenuDisplaySSD1306 disp;
+#endif
 
-ConfigDisplay disp;
 ConfigItem menu("MAIN MENU");
 MenuNavigate nav(&menu, &disp);
 
@@ -209,6 +215,12 @@ void RelayModeSelect(MenuItemBase* menuItem) {
     default:
       conf[item->dataPath] = AUTO;
   }
+  disp.DrawField(menuItem);
+}
+
+void SoundAlarmSelect(MenuItemBase* menuItem) {
+  ConfigItem* item = static_cast<ConfigItem*>(menuItem);
+  conf[item->dataPath] = !conf[item->dataPath];
   disp.DrawField(menuItem);
 }
 
@@ -369,6 +381,8 @@ ConfigItem* newRelayItem(String title, String path) {
   subItem->floatPrec = 2;
   item->subItems.push_back(subItem);
   
+  item->subItems.push_back(new ConfigItem("Sound Alarm", path + "/sound", ONOFF, SoundAlarmSelect));             //on/off
+  
   item->subItems.push_back(new ConfigItem("<<BACK", true));
   return item;
 }
@@ -395,6 +409,7 @@ void setup(uint8_t buzPin, OnConfigExitFunc* onCfgExit) {
 }
 
 void begin() {
+  disp.begin();
   disp.clear();
   disp.setBacklight(conf["backlightOn"]);
   nav.begin();

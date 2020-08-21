@@ -95,16 +95,22 @@
 
 void startMelodyPlay() {
   int melody[] = {
-    NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4
+//    NOTE_A3, NOTE_G3, NOTE_B3, NOTE_F3, 0, NOTE_G3, NOTE_F3, NOTE_B3
+    NOTE_A3, NOTE_G3, NOTE_B3, NOTE_FS3, 0, NOTE_G3, NOTE_FS3, NOTE_B3
   };
   int noteDurations[] = {
-    6, 12, 12, 6, 6, 6, 6, 6
+    4, 4, 2, 2, 4, 2, 4, 2
   };
   for (int thisNote = 0; thisNote < 8; thisNote++) {
       int noteDuration = 1000 / noteDurations[thisNote];
       tone(BUZZER, melody[thisNote]*2, noteDuration);
       int pauseBetweenNotes = noteDuration * 1.30;
       delay(pauseBetweenNotes);
-      noTone(8);
+//      noTone(BUZZER);
     }
+}
+
+void alarmSignal() {
+  int noteDuration = 1000 / 2;
+  tone(BUZZER, NOTE_G3, noteDuration);
 }

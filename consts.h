@@ -1,3 +1,7 @@
+#define VER "v.2020/08/21"
+//#define LCDDisplay
+
+
 #define TX 1
 #define RX 3
 
@@ -6,7 +10,8 @@
 
 //дисплей
 //SCL, SDA - стандартные D1, D2
-#define DSPL_ADDR 0x27
+#define LCD_DSPL_ADDR 0x27
+#define OLED_DSPL_ADDR 0x3C
 
 //енкодер
 #define ENC_BTN D3
@@ -33,3 +38,8 @@
 //corresponding to increments of 0.5°C, 0.25°C, 0.125°C, and 0.0625°C, respectively. 
 
 const float emptySignal = -127;
+
+#define APSSID "duremar4"
+#define APPSK  "duremar4" //len min 8
+#define WWWUSER "duremar4"
+#define WWWPWD  "duremar4"

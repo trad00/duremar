@@ -8,7 +8,8 @@ class MenuItemBase;
 class IMenuDisplay {
   public:
     virtual uint8_t getRowCount() = 0;
-    virtual void startDraw() = 0;
+    virtual void beginDraw() = 0;
+    virtual void endDraw() = 0;
     virtual void DrawTitle(MenuItemBase* item) = 0;
     virtual void DrawItem(MenuItemBase* item) = 0;
     virtual void selectLine(uint8_t line) = 0;
@@ -95,7 +96,7 @@ void MenuNavigate::doSound(uint16_t frequency, uint16_t duration) {
 
 void MenuNavigate::menuDraw(bool redraw) {
   if (redraw){
-    display->startDraw();
+    display->beginDraw();
     if (current.menu->titleDisplay) {
       display->DrawTitle(current.menu);
     }
@@ -104,6 +105,7 @@ void MenuNavigate::menuDraw(bool redraw) {
         display->DrawItem(current.menu->subItems[i]);
       }
     }
+    display->endDraw();
   }
   display->selectLine(current.line);
 }

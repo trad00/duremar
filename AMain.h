@@ -5,14 +5,20 @@
 #include <DallasTemperature.h>
 #include <Wire.h>
 #include <Adafruit_BMP280.h>
-#include <LiquidCrystal_PCF8574.h>
+
+#include "AMainDisplay.h"
 
 namespace main {
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 Adafruit_BMP280 bmp;
-LiquidCrystal_PCF8574 lcd(DSPL_ADDR);
+
+#ifdef LCDDisplay
+MainDisplayPCF8574 disp;
+#else
+MainDisplaySSD1306 disp;
+#endif
 
 uint8_t page = 0;
 uint8_t pinSound;
@@ -20,11 +26,14 @@ bool soundOn;
 bool bmpBegan;
 
 unsigned long lastUpdate = 0;
-unsigned long updateInterval = 5000;
+unsigned long updateInterval = 3000;
 
 unsigned long lastUpdateTimer = 0;
 unsigned long updateIntervalTimer = 1000;
 
+unsigned long lastAlarmTimer = 0;
+unsigned long alarmIntervalTimer = 1000;
+bool alarm = false;
 
 float _temps[4];
 double _atm_t;
@@ -103,6 +112,7 @@ public:
   
   void init() {
     relMode = config::conf[pref + "/mode"];
+    soundAlarm = config::conf[pref + "/sound"];
     
     tOnSet = isSet(config::conf[pref + "/on/sensor"], tOnIndex);
     operOn = config::conf[pref + "/on/oper"];
@@ -131,18 +141,28 @@ public:
       default: {
         if (tOnSet) {
           float temp = getTempSensor(tOnIndex);
-          if (operOn == config::MORE && temp > tempOn || operOn == config::LESS && temp < tempOn) {
+          
+          bool isMore = (temp - tempOn) > 0.001;
+          bool isLess = (tempOn - temp) > 0.001;
+
+          if (operOn == config::MORE && isMore || operOn == config::LESS && isLess) {
             if (digitalRead(pin) == REL_OFF) {
               digitalWrite(pin, REL_ON);
+              alarm = soundAlarm;
               timeOn = millis();
             }
           }
         }
         if (tOffSet) {
           float temp = getTempSensor(tOffIndex);
-          if (operOff == config::MORE && temp > tempOff || operOff == config::LESS && temp < tempOff) {
+
+          bool isMore = (temp - tempOff) > 0.001;
+          bool isLess = (tempOff - temp) > 0.001;
+          
+          if (operOff == config::MORE && isMore || operOff == config::LESS && isLess) {
             if (digitalRead(pin) == REL_ON) {
               digitalWrite(pin, REL_OFF);
+              alarm = false;
               timeOff = millis();
             }
           }
@@ -156,6 +176,7 @@ public:
       if (millis()-timeOn > (timeMMOn*60 + timeSSOn)*1000) {
         if (digitalRead(pin) == REL_ON) {
           digitalWrite(pin, REL_OFF);
+          alarm = false;
         }
       }
     }
@@ -163,6 +184,7 @@ public:
       if (millis()-timeOff > (timeMMOff*60 + timeSSOff)*1000) {
         if (digitalRead(pin) == REL_OFF) {
           digitalWrite(pin, REL_ON);
+          alarm = soundAlarm;
         }
       }
     }
@@ -207,16 +229,19 @@ private:
   config::enOPER operOn;
   float tempOn;
   unsigned long timeOn;
-  int timeMMOn;
-  int timeSSOn;
-  int timeMMOff;
-  int timeSSOff;
   
   bool tOffSet;
   uint8_t tOffIndex;
   config::enOPER operOff;
   float tempOff;
   unsigned long timeOff;
+  
+  int timeMMOn;
+  int timeSSOn;
+  int timeMMOff;
+  int timeSSOff;
+  
+  bool soundAlarm;
   
   float normP;
   float atmCorr;
@@ -271,47 +296,33 @@ bool parameterCompare1() {
 
 void draw(bool redraw = false) {
   if (redraw)
-    lcd.clear();
+    disp.clear();
     
   if (page == 0) {
     if (redraw || parameterCompare0()) {
+      disp.beginDraw();
       for (uint8_t i=0; i<4; i++) {
-        lcd.setCursor(0, i);
-        lcd.print("T" + String(i+1));
-        lcd.setCursor(3, i);
-        lcd.print(fmtTemperature(temps[i], 1));
+        String temp = fmtTemperature(temps[i], 1);
+        disp.drawTemp(i, temp);
       }
       for (uint8_t i=0; i<4; i++) {
         bool relOn = digitalRead(ra[i].getPin()) == REL_ON;
-        lcd.setCursor(13, i);
-        lcd.print("R" + String(i+1));
-        lcd.setCursor(16, i);
-        lcd.print(relOn ? "ON ": "OFF");
+        disp.drawRelay(i, relOn);
       }
+      disp.endDraw();
       parameterSet0();
     }
   } else if (page == 1) {
     if (redraw || parameterCompare1()) {
-      
-      lcd.setCursor(0, 0);
-      lcd.print("Atm T ");
-      lcd.print(fmtTemperature(atm_t, 1));
-      
-      lcd.setCursor(0, 1);
-      lcd.print("Atm P ");
-      lcd.print(fmtPressure(atm_prs_mmHg, 1));
-      
-      lcd.setCursor(0, 2);
-      lcd.print("Alt   ");
-      lcd.print(fmtAlt(bar_alt, 1));
-
+      disp.beginDraw();
+      String AtmT = fmtTemperature(atm_t, 1);
+      String AtmP = fmtPressure(atm_prs_mmHg, 1);
+      String Alt = fmtAlt(bar_alt, 1);
+      disp.drawPage2(AtmT, AtmP, Alt);
+      disp.endDraw();
       parameterSet1();
     }
   }
-}
-
-void backlight(uint8_t backlightOn) {
-  lcd.setBacklight(backlightOn);
 }
 
 void nextPage() {
@@ -378,11 +389,11 @@ void readAllSensors() {
 void setup() {
   parameterReset();
   startAllSensors();
-  lcd.begin(LCD_COLS, LCD_ROWS);
+  disp.begin();
 }
 
 void init() {
-  lcd.setBacklight(config::conf["backlightOn"]);
+  disp.setBacklight(config::conf["backlightOn"]);
   setSound(BUZZER, config::conf["soundOn"]);
 
   for (uint8_t i=0; i<4; i++)
@@ -407,19 +418,21 @@ void loop() {
     readAllSensors();
     actuate();
   }
+  if (alarm) {
+    if ((millis() - lastAlarmTimer >= alarmIntervalTimer) || lastAlarmTimer == 0) {
+      lastAlarmTimer = millis();
+      alarmSignal();
+    }
+  }
 }
 
-void welcome() {
-  lcd.clear();
-  lcd.setCursor(4,0);
-  lcd.print("Duremar 4.0");
-  lcd.setCursor(0,1);
-  lcd.print("Hello from Valerich!");
-  lcd.setCursor(0,2);
-  lcd.print("(c) trad00@yandex.ru");
-  lcd.setCursor(8,3);
-  lcd.print("2020");
-  delay(3000);
+void welcome(bool startMelody) {
+  disp.welcome();
+  if (startMelody)
+    startMelodyPlay();
+  else
+    delay(3000);
+//  delay(2000);
 }
 } //namespace
 

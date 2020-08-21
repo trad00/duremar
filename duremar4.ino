@@ -1,3 +1,5 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
 #include <Button2.h>
 #include <ESPRotary.h>
 
@@ -6,6 +8,7 @@
 #include "common.h"
 #include "Config.h"
 #include "AMain.h"
+#include "WebServer.h"
 
 enum MODES { MAIN, CONFIG };
 MODES mode = MAIN;
@@ -31,6 +34,10 @@ void onEncRight(ESPRotary& rotary) {
 }
 
 void buttonPressed(Button2& btn) {
+  if (main::alarm) {
+    main::alarm = false;
+    return;
+  }
   if (mode == CONFIG)
     config::buttonPressed(btn);
   else {
@@ -42,13 +49,14 @@ void buttonPressed(Button2& btn) {
 void onConfigExit() {
   mode = MAIN;
   main::init();
+  main::begin();
   main::draw(true);
 }
 
 void setup() {
   Serial.begin(115200);
   Serial.println();
-  
+
   pinMode(ENC_A, INPUT_PULLUP);
   pinMode(ENC_B, INPUT_PULLUP);
   pinMode(ENC_BTN, INPUT_PULLUP);
@@ -66,12 +74,12 @@ void setup() {
   button.setPressedHandler(buttonPressed);
   rotary.setRightRotationHandler(onEncRight);
   rotary.setLeftRotationHandler(onEncLeft);
-  
+
   config::setup(BUZZER, onConfigExit);
 
   main::setup();
   main::init();
-  main::welcome();
+  main::welcome(config::conf["soundOn"]);
   main::begin();
   
   if (mode == CONFIG)
@@ -79,8 +87,9 @@ void setup() {
   else
     main::draw(true);
 
-//  if (config::conf["soundOn"])
-//    startMelodyPlay();
+  webserver::setup();
+  webserver::begin();
+
 }
 
 unsigned long lastRedrawTimer = 0;
@@ -101,4 +110,5 @@ void loop() {
     main::loop();
     main::draw(getRedraw());
   }
+  webserver::loop();
 }
