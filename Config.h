@@ -25,6 +25,7 @@ StaticJsonDocument<capacity> conf;
 
 void initConfig() {
   conf["soundOn"] = true;
+  conf["melodyOn"] = true;
   conf["backlightOn"] = true;
   conf["wifiMode"] = AP;
   conf["normalPressure"] = 760;
@@ -189,6 +190,12 @@ void SoundSelect(MenuItemBase* menuItem) {
   disp.DrawField(menuItem);
 }
 
+void MelodySelect(MenuItemBase* menuItem) {
+  conf["melodyOn"] = !conf["melodyOn"];
+  disp.DrawField(menuItem);
+}
+
+
 void BacklightSelect(MenuItemBase* menuItem) {
   conf["backlightOn"] = !conf["backlightOn"];
   disp.setBacklight(conf["backlightOn"]);
@@ -262,9 +269,19 @@ bool adjustFieldMode = false;
 void (*adjustField)(bool);
 ConfigItem* adjustItem;
 
+unsigned long lastAdjust = 0;
+
 void adjustFloatField(bool increase) {
+  bool fineAdjust = (millis() - lastAdjust) > 50;
+  lastAdjust = millis();
+  
+  float adjStep;
+  if (fineAdjust)
+    adjStep = 1 / pow(10, adjustItem->floatPrec);
+  else
+    adjStep = 1;
+
   float val = conf[adjustItem->dataPath];
-  float adjStep = 1 / pow(10, adjustItem->floatPrec);
   val += (increase ? adjStep : -adjStep);
   conf[adjustItem->dataPath] = val;
   disp.DrawField(adjustItem, true);
@@ -342,6 +359,7 @@ ConfigItem* newSettingItem(String title) {
   item->subItems.push_back(newCalibrateGroupItem("Calibrate"));
   item->subItems.push_back(new ConfigItem("Norm atm prs", "normalPressure", FLOAT, FloatDataSelect));
   item->subItems.push_back(new ConfigItem("Sound", "soundOn", ONOFF, SoundSelect));             //on/off
+  item->subItems.push_back(new ConfigItem("Melody", "melodyOn", ONOFF, MelodySelect));          //on/off
   item->subItems.push_back(new ConfigItem("Backlight", "backlightOn", ONOFF, BacklightSelect)); //on/off
   item->subItems.push_back(new ConfigItem("WiFi mode", "wifiMode", ENWFM, WiFiModeSelect));     //enum AP/STA
   item->subItems.push_back(new ConfigItem("Reset to Default", DefaultSelect));

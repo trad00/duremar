@@ -79,7 +79,7 @@ void setup() {
 
   main::setup();
   main::init();
-  main::welcome(config::conf["soundOn"]);
+  main::welcome(config::conf["melodyOn"]);
   main::begin();
   
   if (mode == CONFIG)
@@ -93,7 +93,7 @@ void setup() {
 }
 
 unsigned long lastRedrawTimer = 0;
-unsigned long redrawIntervalTimer = 10000;
+unsigned long redrawIntervalTimer = 60000;
 bool getRedraw() {
   if ((millis() - lastRedrawTimer >= redrawIntervalTimer) || lastRedrawTimer == 0) {
     lastRedrawTimer = millis();

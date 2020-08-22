@@ -5,6 +5,8 @@
 #include <LiquidCrystal_PCF8574.h> //Monochrome LCD based on PCF8574 drivers
 #include <Adafruit_SSD1306.h> //Monochrome OLEDs based on SSD1306 drivers
 
+#ifdef LCDDisplay
+
 class MenuDisplayPCF8574 : public IMenuDisplay {
   #define LCD_COLS 20
   #define LCD_ROWS 4
@@ -98,6 +100,7 @@ class MenuDisplayPCF8574 : public IMenuDisplay {
     }
 };
 
+#else
 
 class MenuDisplaySSD1306 : public IMenuDisplay {
   #define SCREEN_WIDTH 128
@@ -205,5 +208,7 @@ class MenuDisplaySSD1306 : public IMenuDisplay {
       }
     }
 };
+
+#endif
 
 #endif

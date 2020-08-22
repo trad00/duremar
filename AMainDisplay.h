@@ -4,6 +4,10 @@
 #include <LiquidCrystal_PCF8574.h> //Monochrome LCD based on PCF8574 drivers
 #include <Adafruit_SSD1306.h> //Monochrome OLEDs based on SSD1306 drivers
 
+IPAddress webServerIP;
+
+#ifdef LCDDisplay
+
 class MainDisplayPCF8574 {
 #define LCD_COLS 20
 #define LCD_ROWS 4
@@ -60,6 +64,10 @@ public:
     lcd.setCursor(0, 2);
     lcd.print("Alt   ");
     lcd.print(Alt);
+    
+    lcd.setCursor(0, 3);
+    lcd.print("IP: ");
+    lcd.print(webServerIP);
   }
   
   void welcome() {
@@ -74,6 +82,8 @@ public:
     lcd.print(VER);
   }
 };
+
+#else
 
 class MainDisplaySSD1306 {
 #define SCREEN_WIDTH 128
@@ -115,8 +125,8 @@ public:
   
   void clear() {
     display.clearDisplay();
-    display.display();
-    delay(1);
+//    display.display();
+//    delay(1);
   }
   
   void beginDraw() {
@@ -147,6 +157,10 @@ public:
   
   void drawPage2(String AtmT, String AtmP, String Alt) {
     display.setTextSize(1);
+    
+    display.setCursor(0, 0);
+    display.print("IP: ");
+    display.print(webServerIP);
 
     display.setCursor(0, 16);
     display.print("Atm T ");
@@ -185,5 +199,7 @@ public:
     delay(1);
   }
 };
+
+#endif
 
 #endif
