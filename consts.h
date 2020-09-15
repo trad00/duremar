@@ -1,4 +1,4 @@
-#define VER "v.2020/08/22"
+#define VER "v.2020/09/16"
 #define LCDDisplay
 
 
@@ -21,12 +21,17 @@
 #define ENC_B RX
 
 //управление реле
-#define RELAY1 D5
-#define RELAY2 D6
-#define RELAY3 D7
-#define RELAY4 D8 //пока отключено
-#define REL_ON LOW
-#define REL_OFF HIGH
+//#define RELAY1 D5
+//#define RELAY2 D6
+//#define RELAY3 D7
+//#define RELAY4 D8 //пока отключено
+//#define REL_ON LOW
+//#define REL_OFF HIGH
+
+//управление сдвиговым регистром 74HC595 (управление реле)
+#define DATA_PIN D5  // к выводу 14 регистра SD
+#define CLOCK_PIN D7 // к выводу 11 регистра (SH_CP)
+#define LATCH_PIN D6 // к выводу 12 регистра (ST_CP)
 
 //датчики
 #define ONE_WIRE_BUS D4

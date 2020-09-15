@@ -7,6 +7,7 @@
 #include <Adafruit_BMP280.h>
 
 #include "AMainDisplay.h"
+#include "BitsToShift.h"
 
 namespace main {
 
@@ -42,10 +43,24 @@ double _bar_alt;
 bool _rOn[4];
 
 float temps[4] = {emptySignal,emptySignal,emptySignal,emptySignal};
-float clb_temps[4] = {0,0,0,0};
+float clbTemps[4] = {0,0,0,0};
+float atmCorr[4] = {0,0,0,0};
+float normP = 760;
 double atm_t = emptySignal;
 double atm_prs_mmHg = emptySignal;
 double bar_alt = emptySignal;
+
+float getTempSensor(uint8_t tIndex) {
+  float temp = temps[tIndex];
+  if (temp != emptySignal) {
+    temp += clbTemps[tIndex];
+  }
+  if (temp != emptySignal && atm_prs_mmHg != emptySignal) {
+    temp += atmCorr[tIndex] * (atm_prs_mmHg - normP);
+  }
+  temp = roundPrec(temp, 1);
+  return temp;
+}
 
 void setSound(uint8_t pin, bool on) {
   pinSound = pin;
@@ -91,22 +106,28 @@ String fmtAlt(float val, int decPlc) {
   return fmtFloatValue(val, decPlc, " m  ");
 }
 
+BitsToShift bts;
+
 class RelayActuator {
 public:
   RelayActuator(uint8_t chan) {
     pref = String(chan);
     switch(chan) {
       case 1:
-        pin = RELAY1;
+        reg_bit = 0b01000000;
+//        pin = RELAY1;
         break;
       case 2:
-        pin = RELAY2;
+        reg_bit = 0b00100000;
+//        pin = RELAY2;
         break;
       case 3:
-        pin = RELAY3;
+        reg_bit = 0b00010000;
+//        pin = RELAY3;
         break;
       default:
-        pin = RELAY4;
+        reg_bit = 0b10000000;
+//        pin = RELAY4;
     }
   }
   
@@ -125,18 +146,42 @@ public:
     tempOff = config::conf[pref + "/off/temp"];
     timeMMOff = config::conf[pref + "/off/timeMM"];
     timeSSOff = config::conf[pref + "/off/timeSS"];
-    
-    normP = config::conf["normalPressure"];
-    atmCorr = config::conf[pref + "atmCorr"];
+  }
+  
+  config::enRELMODE getMode() {
+    return relMode;
+  }
+  
+  void setMode(config::enRELMODE mode) {
+    relMode = mode;
+    config::conf[pref + "/mode"] = relMode;
+    config::saveConfig();
+    actuate();
+  }
+  
+  void shiftMode() {
+    switch (relMode) {
+      case config::AUTO:
+        setMode(config::rmON);
+        break;
+      case config::rmON:
+        setMode(config::rmOFF);
+        alarm = false;
+        break;
+      default:
+        setMode(config::AUTO);
+    }
   }
   
   void actuate() {
     switch (relMode) {
       case config::rmON:
-        digitalWrite(pin, REL_ON);
+        ON();
+//        digitalWrite(pin, REL_ON);
         break;
       case config::rmOFF:
-        digitalWrite(pin, REL_OFF);
+        OFF();
+//        digitalWrite(pin, REL_OFF);
         break;
       default: {
         if (tOnSet) {
@@ -146,8 +191,10 @@ public:
           bool isLess = (tempOn - temp) > 0.001;
 
           if (operOn == config::MORE && isMore || operOn == config::LESS && isLess) {
-            if (digitalRead(pin) == REL_OFF) {
-              digitalWrite(pin, REL_ON);
+//            if (digitalRead(pin) == REL_OFF) {
+//              digitalWrite(pin, REL_ON);
+            if (!STATUS()) {
+              ON();
               alarm = soundAlarm;
               timeOn = millis();
             }
@@ -160,8 +207,10 @@ public:
           bool isLess = (tempOff - temp) > 0.001;
           
           if (operOff == config::MORE && isMore || operOff == config::LESS && isLess) {
-            if (digitalRead(pin) == REL_ON) {
-              digitalWrite(pin, REL_OFF);
+//            if (digitalRead(pin) == REL_ON) {
+//              digitalWrite(pin, REL_OFF);
+            if (STATUS()) {
+              OFF();
               alarm = false;
               timeOff = millis();
             }
@@ -174,35 +223,45 @@ public:
   void timerCheck() {
     if (tOnSet && (timeMMOn != 0 || timeSSOn != 0)) {
       if (millis()-timeOn > (timeMMOn*60 + timeSSOn)*1000) {
-        if (digitalRead(pin) == REL_ON) {
-          digitalWrite(pin, REL_OFF);
+//        if (digitalRead(pin) == REL_ON) {
+//          digitalWrite(pin, REL_OFF);
+        if (STATUS()) {
+          OFF();
           alarm = false;
         }
       }
     }
     if (tOffSet && (timeMMOff != 0 || timeSSOff != 0)) {
       if (millis()-timeOff > (timeMMOff*60 + timeSSOff)*1000) {
-        if (digitalRead(pin) == REL_OFF) {
-          digitalWrite(pin, REL_ON);
+//        if (digitalRead(pin) == REL_OFF) {
+//          digitalWrite(pin, REL_ON);
+        if (!STATUS()) {
+          ON();
           alarm = soundAlarm;
         }
       }
     }
   }
   
-  inline uint8_t getPin() {
-    return pin;
+//  inline uint8_t getPin() {
+//    return pin;
+//  }
+  
+  inline bool STATUS() {
+    return bts.getBit(reg_bit);
+  }
+  
+  inline void ON() {
+    if (!STATUS())
+      bts.setBit(reg_bit, true);
+  }
+  
+  inline void OFF() {
+    if (STATUS())
+      bts.setBit(reg_bit, false);
   }
   
 private:
-  float getTempSensor(uint8_t tIndex) {
-    float temp = temps[tIndex];
-    if (temp != emptySignal && atm_prs_mmHg != emptySignal) {
-      temp += atmCorr * (atm_prs_mmHg - normP);
-    }
-    temp = roundPrec(temp, 1);
-    return temp;
-  }
   bool isSet(config::enSENSNO no, uint8_t& tIndex) {
     switch(no) {
       case config::T1:
@@ -243,10 +302,8 @@ private:
   
   bool soundAlarm;
   
-  float normP;
-  float atmCorr;
-  
-  uint8_t pin;
+  uint8_t reg_bit;
+//  uint8_t pin;
   String pref;
 };
 
@@ -261,7 +318,7 @@ void parameterReset() {
   _bar_alt = emptySignal;
   
   for (uint8_t i=0; i<4; i++)
-    _rOn[i] = digitalRead(ra[i].getPin()) == REL_ON;
+    _rOn[i] = ra[i].STATUS();
 }
 
 void parameterSet0() {
@@ -269,7 +326,7 @@ void parameterSet0() {
     _temps[i] = temps[i];
     
   for (uint8_t i=0; i<4; i++)
-    _rOn[i] = digitalRead(ra[i].getPin()) == REL_ON;
+    _rOn[i] = ra[i].STATUS();
 }
 
 void parameterSet1() {
@@ -284,7 +341,7 @@ bool parameterCompare0() {
       return true;
     
   for (uint8_t i=0; i<4; i++)
-    if (_rOn[i] != (digitalRead(ra[i].getPin()) == REL_ON))
+    if (_rOn[i] != ra[i].STATUS())
       return true;
       
   return false;
@@ -302,12 +359,11 @@ void draw(bool redraw = false) {
     if (redraw || parameterCompare0()) {
       disp.beginDraw();
       for (uint8_t i=0; i<4; i++) {
-        String temp = fmtTemperature(temps[i], 1);
+        String temp = fmtTemperature(getTempSensor(i), 1);
         disp.drawTemp(i, temp);
       }
       for (uint8_t i=0; i<4; i++) {
-        bool relOn = digitalRead(ra[i].getPin()) == REL_ON;
-        disp.drawRelay(i, relOn);
+        disp.drawRelay(i, ra[i].STATUS());
       }
       disp.endDraw();
       parameterSet0();
@@ -375,7 +431,7 @@ void readAllSensors() {
   //DS18B20
   sensors.requestTemperatures(); 
   for (uint8_t i=0; i<4; i++)
-    temps[i] = sensors.getTempCByIndex(i) + clb_temps[i];
+    temps[i] = sensors.getTempCByIndex(i);
 
   //BMP280
   if (bmpBegan) {
@@ -396,8 +452,12 @@ void init() {
   disp.setBacklight(config::conf["backlightOn"]);
   setSound(BUZZER, config::conf["soundOn"]);
 
-  for (uint8_t i=0; i<4; i++)
-    clb_temps[i] = config::conf["calibrate/T" + String(i+1)];
+  normP = config::conf["normalPressure"];
+  
+  for (uint8_t i=0; i<4; i++) {
+    clbTemps[i] = config::conf["calibrate/T" + String(i+1)];
+    atmCorr[i] = config::conf[String(i+1) + "/atmCorr"];
+  }
   
   for (uint8_t i=0; i<4; i++)
     ra[i].init();

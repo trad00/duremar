@@ -44,35 +44,9 @@ void handleRoot() {
 <head>
 <meta charset="utf-8">
 <title>Duremar 4</title>
-
-<style type="text/css">
-  table {
-    background: white;
-    border: 0px solid black;
-  }
-  td {
-    font-size: 30pt;
-    font-family: Verdana, Arial, Helvetica, sans-serif;
-    padding: 10px 40px;
-    text-align: center;
-  }
-  .Rbtn {
-    font-size: 30pt;
-    font-family: Verdana, Arial, Helvetica, sans-serif;
-    text-align: center;
-    color: white;
-    float: left;
-    width: 70px;
-    padding: 20px 20px;
-    margin: 5px 5px;
-    background-color: gray;
-  }
-  .RbtnOn {
-    background-color: #43a209;
-  }
-</style>
+<link rel="stylesheet" href="main.css">
+<script src="main.js"></script>
 </head>
-
 <body>
 <table>
 <tr><td>T1</td><td id="t0">--</td></tr>
@@ -80,36 +54,109 @@ void handleRoot() {
 <tr><td>T3</td><td id="t2">--</td></tr>
 <tr><td>T4</td><td id="t3">--</td></tr>
 </table>
-<hr/>
-<div class="Rbtn" id="r0">R1</div>
-<div class="Rbtn" id="r1">R2</div>
-<div class="Rbtn" id="r2">R3</div>
-<div class="Rbtn" id="r3">R4</div>
+<div>
+  <div class="Rbtn" id="r0" onclick="bclk(0)">R1<div id="m0">--</div></div>
+  <div class="Rbtn" id="r1" onclick="bclk(1)">R2<div id="m1">--</div></div>
+  <div class="Rbtn" id="r2" onclick="bclk(2)">R3<div id="m2">--</div></div>
+  <div class="Rbtn" id="r3" onclick="bclk(3)">R4<div id="m3">--</div></div>
+</div>
 </body>
-
 <script type="text/javascript">
+  update();
+</script>
+</html>
+  )rawliteral";
+  server.send(200, "text/html", html);
+}
+
+void handleCSS() {
+  const char text[] = R"rawliteral(
+table {
+  background: white;
+  border: 0px solid black;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+td {
+  font-size: 50pt;
+  font-family: Verdana;
+  padding: 10px 30px;
+  text-align: center;
+}
+.Rbtn {
+  display: block;
+  font-size: 50pt;
+  font-family: Verdana;
+  text-align: center;
+  vertical-align: middle;
+  width: 350px;
+  padding: 20px 20px;
+  margin: 5px 5px;
+  color: white;
+  background-color: gray;
+  cursor: pointer;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.RbtnOn {
+  background-color: #43a209;
+}
+  )rawliteral";
+  server.send(200, "text/css", text);
+}
+
+void handleJS() {
+  const char text[] = R"rawliteral(
+function bclk(i) {
+  var xhttp = new XMLHttpRequest();
+  xhttp.open("POST", "/switch", true);
+  xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == XMLHttpRequest.DONE && this.status == 200) {
+      update();
+    }
+  }
+  xhttp.send("i="+i);
+}
 function update() {
   var xhttp = new XMLHttpRequest();
   xhttp.onreadystatechange = function() {
-    if (this.readyState == 4) {
+    if (this.readyState == XMLHttpRequest.DONE) {
       if (this.status == 200) {
         var data = JSON.parse(this.responseText);
         var elem;
         for (let i = 0; i < 4; i++) {
-          elem = document.getElementById("t"+i);
-          elem.innerHTML = data[i];
-        }
-        for (let i = 0; i < 4; i++) {
+          
           elem = document.getElementById("r"+i);
-          if (data[i+4] == 0)
+          var relay_on = data[i*2+4];
+          if (relay_on == 0)
             elem.classList.remove("RbtnOn");
           else
             elem.classList.add("RbtnOn");
+          
+          elem = document.getElementById("m"+i);
+          var relay_mode = data[i*2+5];
+          if (relay_mode == 0)
+              elem.innerHTML = "AUTO";
+          else if (relay_mode == 1)
+              elem.innerHTML = "ON";
+          else
+              elem.innerHTML = "OFF";
+        }
+        for (let i = 0; i < 4; i++) {
+          elem = document.getElementById("t"+i);
+          elem.innerHTML = data[i];
         }
       } else {
         var elem;
         for (let i = 0; i < 4; i++) {
           elem = document.getElementById("t"+i);
+          elem.innerHTML = "--";
+          elem = document.getElementById("m"+i);
           elem.innerHTML = "--";
         }
       }
@@ -119,17 +166,11 @@ function update() {
   xhttp.send();
   setTimeout(update, 2500);
 };
-update();
-</script>
-
-</html>
   )rawliteral";
-  
-  server.send(200, "text/html", html);
+  server.send(200, "text/javascript", text);
 }
 
 void handleGetData() {
-  Serial.println("handleGetData");
   server.sendHeader("Cache-Control", "no-cache");
   String json = "[";
   for (uint8_t i=0; i<4; i++) {
@@ -138,18 +179,29 @@ void handleGetData() {
     json += "\"" + fmtTemperature(main::temps[i], 1) + "\"";
   }
   for (uint8_t i=0; i<4; i++) {
-    bool relOn = digitalRead(main::ra[i].getPin()) == REL_ON;
-    json += "," + String(relOn);
+    main::RelayActuator &ra = main::ra[i];
+    json += "," + String(ra.STATUS());
+    json += "," + String(ra.getMode());
   }
   json += "]";
   server.send(200, "text/plain", json);
+}
+
+void handleSwitch() {
+  uint8_t i = server.arg("i").toInt();
+  main::RelayActuator &ra = main::ra[i];
+  ra.shiftMode();
+  server.send(200);
 }
 
 void setup() {
   WiFi.softAP(ssid, password);
   webServerIP = WiFi.softAPIP();
   server.on("/", handleRoot);
+  server.on("/main.css", handleCSS);
+  server.on("/main.js", handleJS);
   server.on("/data", handleGetData);
+  server.on("/switch", handleSwitch);
 }
 
 void begin() {

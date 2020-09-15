@@ -62,14 +62,18 @@ void setup() {
   pinMode(ENC_BTN, INPUT_PULLUP);
   pinMode(BUZZER, OUTPUT);
   
-  pinMode(RELAY1, OUTPUT);
-  pinMode(RELAY2, OUTPUT);
-  pinMode(RELAY3, OUTPUT);
-  pinMode(RELAY4, OUTPUT);
-  digitalWrite(RELAY1, REL_OFF);
-  digitalWrite(RELAY2, REL_OFF);
-  digitalWrite(RELAY3, REL_OFF);
-  digitalWrite(RELAY4, REL_OFF);
+//  pinMode(RELAY1, OUTPUT);
+//  pinMode(RELAY2, OUTPUT);
+//  pinMode(RELAY3, OUTPUT);
+//  pinMode(RELAY4, OUTPUT);
+//  digitalWrite(RELAY1, REL_OFF);
+//  digitalWrite(RELAY2, REL_OFF);
+//  digitalWrite(RELAY3, REL_OFF);
+//  digitalWrite(RELAY4, REL_OFF);
+  pinMode(DATA_PIN, OUTPUT);
+  pinMode(CLOCK_PIN, OUTPUT);
+  pinMode(LATCH_PIN, OUTPUT);
+  digitalWrite(LATCH_PIN, LOW);
 
   button.setPressedHandler(buttonPressed);
   rotary.setRightRotationHandler(onEncRight);

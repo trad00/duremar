@@ -78,7 +78,7 @@ public:
     lcd.print("Hello from Valerich!");
     lcd.setCursor(0, 2);
     lcd.print("(c) trad00@yandex.ru");
-    lcd.setCursor(0, 3);
+    lcd.setCursor(4, 3);
     lcd.print(VER);
   }
 };
