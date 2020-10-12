@@ -5,12 +5,6 @@
 
 namespace webserver {
 
-const char *ssid = APSSID;
-const char *password = APPSK;
-
-const char* www_username = WWWUSER;
-const char* www_password = WWWPWD;
-
 ESP8266WebServer server(80);
 
 String fmtFloatValue(float val, int decPlc, String unit) {
@@ -34,7 +28,7 @@ String fmtAlt(float val, int decPlc) {
 }
 
 void handleRoot() {
-  if (!server.authenticate(www_username, www_password)) {
+  if (!server.authenticate(WWWUSER, WWWPWD)) {
     return server.requestAuthentication();
   }
   
@@ -59,6 +53,9 @@ void handleRoot() {
   <div class="Rbtn" id="r1" onclick="bclk(1)">R2<div id="m1">--</div></div>
   <div class="Rbtn" id="r2" onclick="bclk(2)">R3<div id="m2">--</div></div>
   <div class="Rbtn" id="r3" onclick="bclk(3)">R4<div id="m3">--</div></div>
+</div>
+<div>
+© trad00@yandex.ru
 </div>
 </body>
 <script type="text/javascript">
@@ -195,8 +192,6 @@ void handleSwitch() {
 }
 
 void setup() {
-  WiFi.softAP(ssid, password);
-  webServerIP = WiFi.softAPIP();
   server.on("/", handleRoot);
   server.on("/main.css", handleCSS);
   server.on("/main.js", handleJS);

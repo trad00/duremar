@@ -3,6 +3,7 @@
 
 #include <LiquidCrystal_PCF8574.h> //Monochrome LCD based on PCF8574 drivers
 #include <Adafruit_SSD1306.h> //Monochrome OLEDs based on SSD1306 drivers
+#include "IPAddress.h"
 
 IPAddress webServerIP;
 
@@ -80,6 +81,12 @@ public:
     lcd.print("(c) trad00@yandex.ru");
     lcd.setCursor(4, 3);
     lcd.print(VER);
+  }
+  
+  void startWiFi() {
+    lcd.clear();
+    lcd.setCursor(0, 1);
+    lcd.print("Starting WiFi ...");
   }
 };
 
@@ -194,6 +201,16 @@ public:
     display.setCursor(4, 52);
     display.print(VER);
     
+    display.setTextSize(TEXT_SIZE);
+    display.display();
+    delay(1);
+  }
+  
+  void startWiFi() {
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setCursor(4, 28);
+    display.print("Starting WiFi ...");
     display.setTextSize(TEXT_SIZE);
     display.display();
     delay(1);

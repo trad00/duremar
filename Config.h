@@ -324,6 +324,12 @@ void DefaultSelect(MenuItemBase* menuItem) {
   initConfig();
 }
 
+void ResetWiFi(MenuItemBase* menuItem) {
+  WiFiManager wifiManager;
+  wifiManager.resetSettings();
+}
+
+
 void SaveExitSelect(MenuItemBase* menuItem) {
   saveConfig();
   if (onConfigExit)
@@ -362,6 +368,7 @@ ConfigItem* newSettingItem(String title) {
   item->subItems.push_back(new ConfigItem("Melody", "melodyOn", ONOFF, MelodySelect));          //on/off
   item->subItems.push_back(new ConfigItem("Backlight", "backlightOn", ONOFF, BacklightSelect)); //on/off
   item->subItems.push_back(new ConfigItem("WiFi mode", "wifiMode", ENWFM, WiFiModeSelect));     //enum AP/STA
+  item->subItems.push_back(new ConfigItem("Reset WiFi", ResetWiFi));
   item->subItems.push_back(new ConfigItem("Reset to Default", DefaultSelect));
   item->subItems.push_back(new ConfigItem("<<BACK", true));
   return item;

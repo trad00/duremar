@@ -3,7 +3,6 @@
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <Wire.h>
 #include <Adafruit_BMP280.h>
 
 #include "AMainDisplay.h"
@@ -493,6 +492,11 @@ void welcome(bool startMelody) {
   else
     delay(3000);
 }
+
+void displStartWiFi() {
+  disp.startWiFi();
+}
+
 } //namespace
 
 #endif

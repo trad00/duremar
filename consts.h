@@ -1,4 +1,4 @@
-#define VER "v.2020/09/16"
+#define VER "v.2020/10/12"
 #define LCDDisplay
 
 
@@ -15,8 +15,8 @@
 
 //енкодер
 #define ENC_BTN D3
-//#define ENC_A D3
-//#define ENC_B D3
+//#define ENC_A D5
+//#define ENC_B D6
 #define ENC_A TX
 #define ENC_B RX
 

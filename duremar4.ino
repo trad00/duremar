@@ -1,7 +1,6 @@
-#include <ESP8266WiFi.h>
-#include <WiFiClient.h>
 #include <Button2.h>
 #include <ESPRotary.h>
+#include <WiFiManager.h>
 
 #include "consts.h"
 #include "pitches.h"
@@ -53,15 +52,27 @@ void onConfigExit() {
   main::draw(true);
 }
 
+void startWiFi() {
+  config::enWIFIMODE wifiMode = config::conf["wifiMode"];
+  if (wifiMode == config::AP) {
+    WiFi.softAP(APSSID, APPSK);
+    webServerIP = WiFi.softAPIP();
+  }
+  else {
+    main::displStartWiFi();
+    WiFiManager wifiManager;
+    wifiManager.setConfigPortalTimeout(30);
+    if (wifiManager.autoConnect())
+      webServerIP = WiFi.localIP();
+    else
+      webServerIP = WiFi.softAPIP();
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.println();
 
-  pinMode(ENC_A, INPUT_PULLUP);
-  pinMode(ENC_B, INPUT_PULLUP);
-  pinMode(ENC_BTN, INPUT_PULLUP);
-  pinMode(BUZZER, OUTPUT);
-  
 //  pinMode(RELAY1, OUTPUT);
 //  pinMode(RELAY2, OUTPUT);
 //  pinMode(RELAY3, OUTPUT);
@@ -75,6 +86,11 @@ void setup() {
   pinMode(LATCH_PIN, OUTPUT);
   digitalWrite(LATCH_PIN, LOW);
 
+  pinMode(ENC_A, INPUT_PULLUP);
+  pinMode(ENC_B, INPUT_PULLUP);
+  pinMode(ENC_BTN, INPUT_PULLUP);
+  pinMode(BUZZER, OUTPUT);
+
   button.setPressedHandler(buttonPressed);
   rotary.setRightRotationHandler(onEncRight);
   rotary.setLeftRotationHandler(onEncLeft);
@@ -84,6 +100,7 @@ void setup() {
   main::setup();
   main::init();
   main::welcome(config::conf["melodyOn"]);
+  startWiFi();
   main::begin();
   
   if (mode == CONFIG)
