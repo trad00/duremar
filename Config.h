@@ -175,7 +175,7 @@ class ConfigItem : public MenuItemBase {
     }
 };
 
-#ifdef LCDDisplay
+#ifdef LCD
 MenuDisplayPCF8574 disp;
 #else
 MenuDisplaySSD1306 disp;

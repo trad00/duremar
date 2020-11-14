@@ -173,7 +173,7 @@ void handleGetData() {
   for (uint8_t i=0; i<4; i++) {
     if (i>0)
       json += ",";
-    json += "\"" + fmtTemperature(main::temps[i], 1) + "\"";
+    json += "\"" + fmtTemperature(main::getTempSensor(i), 1) + "\"";
   }
   for (uint8_t i=0; i<4; i++) {
     main::RelayActuator &ra = main::ra[i];

@@ -14,7 +14,7 @@ OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 Adafruit_BMP280 bmp;
 
-#ifdef LCDDisplay
+#ifdef LCD
 MainDisplayPCF8574 disp;
 #else
 MainDisplaySSD1306 disp;

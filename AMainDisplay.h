@@ -7,7 +7,7 @@
 
 IPAddress webServerIP;
 
-#ifdef LCDDisplay
+#ifdef LCD
 
 class MainDisplayPCF8574 {
 #define LCD_COLS 20

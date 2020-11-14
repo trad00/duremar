@@ -1,5 +1,7 @@
-#define VER "v.2020/10/12"
-#define LCDDisplay
+#define VER "v.2020/11/14"
+
+#define LCD
+//#define OLED
 
 
 #define TX 1
