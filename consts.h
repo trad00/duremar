@@ -1,11 +1,12 @@
-#define VER "v.2020/11/14"
+#define VER "v.2020/11/29"
 
-#define LCD
-//#define OLED
+//#define LCD
+#define OLED
 
 
 #define TX 1
 #define RX 3
+#define SK 10
 
 //зумер
 #define BUZZER D0
@@ -43,6 +44,9 @@
 #define DS18_RESOLUTION 11 
 //The resolution of the temperature sensor is user-configurable to 9, 10, 11, or 12 bits,
 //corresponding to increments of 0.5°C, 0.25°C, 0.125°C, and 0.0625°C, respectively. 
+
+#define SCALE_DATA SK
+#define SCALE_CLOCK D8
 
 const float emptySignal = -127;
 

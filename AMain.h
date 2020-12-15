@@ -4,6 +4,7 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <Adafruit_BMP280.h>
+#include "HX711.h"
 
 #include "AMainDisplay.h"
 #include "BitsToShift.h"
@@ -13,6 +14,7 @@ namespace main {
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 Adafruit_BMP280 bmp;
+HX711 scale;
 
 #ifdef LCD
 MainDisplayPCF8574 disp;
@@ -40,6 +42,7 @@ double _atm_t;
 double _atm_prs_mmHg;
 double _bar_alt;
 bool _rOn[4];
+float _weight;
 
 float temps[4] = {emptySignal,emptySignal,emptySignal,emptySignal};
 float clbTemps[4] = {0,0,0,0};
@@ -48,6 +51,9 @@ float normP = 760;
 double atm_t = emptySignal;
 double atm_prs_mmHg = emptySignal;
 double bar_alt = emptySignal;
+float weight = 0;
+bool scale_is_ready = false;
+
 
 float getTempSensor(uint8_t tIndex) {
   float temp = temps[tIndex];
@@ -84,7 +90,7 @@ String rightAlign(String str, uint8_t num) {
 }
 
 String fmtFloatValue(float val, int decPlc, String unit) {
-  if (val == emptySignal){
+  if (val == emptySignal) {
     return "n/a";
   }
   uint8_t num = decPlc == 0 ? 3 : 4 + decPlc;
@@ -103,6 +109,13 @@ String fmtPressure(float val, int decPlc) {
 
 String fmtAlt(float val, int decPlc) {
   return fmtFloatValue(val, decPlc, " m  ");
+}
+
+String fmtWeight(float val, int decPlc) {
+  if (!scale_is_ready) {
+    return "n/a";
+  }
+  return fmtFloatValue(val, decPlc, " kg  ");
 }
 
 BitsToShift bts;
@@ -334,6 +347,10 @@ void parameterSet1() {
   _bar_alt = roundFloat(bar_alt, 1);
 }
 
+void parameterSet2() {
+  _weight = roundFloat(weight, 1);
+}
+
 bool parameterCompare0() {
   for (uint8_t i=0; i<4; i++)
     if (_temps[i] != temps[i])
@@ -348,6 +365,10 @@ bool parameterCompare0() {
 
 bool parameterCompare1() {
   return _atm_t != roundFloat(atm_t, 1) || _atm_prs_mmHg != roundFloat(atm_prs_mmHg, 1) || _bar_alt != roundFloat(bar_alt, 1);
+}
+
+bool parameterCompare2() {
+  return _weight != roundFloat(weight, 1);
 }
 
 void draw(bool redraw = false) {
@@ -367,27 +388,47 @@ void draw(bool redraw = false) {
       disp.endDraw();
       parameterSet0();
     }
-  } else if (page == 1) {
+  }
+  
+  else if (page == 1) {
     if (redraw || parameterCompare1()) {
       disp.beginDraw();
       String AtmT = fmtTemperature(atm_t, 1);
       String AtmP = fmtPressure(atm_prs_mmHg, 1);
       String Alt = fmtAlt(bar_alt, 1);
-      disp.drawPage2(AtmT, AtmP, Alt);
+      disp.drawPage1(AtmT, AtmP, Alt);
       disp.endDraw();
       parameterSet1();
+    }
+  }
+  
+  else if (page == 2) {
+    if (redraw || parameterCompare2()) {
+      disp.beginDraw();
+      String Weight = fmtWeight(weight, 1);
+      disp.drawPage2(Weight);
+      disp.endDraw();
+      parameterSet2();
     }
   }
 }
 
 void nextPage() {
-  page = 1 - page;
+  if (page == 2)
+    page = 0;
+  else
+    page++;
+  
   draw(true);
   doSound(100, 5);
 }
 
 void prevPage() {
-  page = 1 - main::page;
+  if (page == 0)
+    page = 2;
+  else
+    page--;
+
   draw(true);
   doSound(100, 5);
 }
@@ -413,6 +454,7 @@ void startAllSensors() {
       sensors.setResolution(deviceAddress, DS18_RESOLUTION);
     }
   }
+  
   // Start the BMP280 sensor
   bmpBegan = bmp.begin(BMP280_ADDRESS_ALT);
   if (bmpBegan) {
@@ -424,6 +466,14 @@ void startAllSensors() {
       Adafruit_BMP280::STANDBY_MS_500   /* Standby time. */
     );
   }
+
+  //Scale HX711
+  scale.begin(SCALE_DATA, SCALE_CLOCK);
+//  scale.wait_ready(100);
+  scale_is_ready = scale.is_ready();
+//  if (scale_is_ready)
+//    scale.tare();
+  
 }
 
 void readAllSensors() {
@@ -439,6 +489,11 @@ void readAllSensors() {
     atm_prs_mmHg = atm_prs_Pa * 0.00750062; // Pa to mmHg
     bar_alt = bmp.readAltitude(BMP_PRESSURE0);
   }
+
+  //Scale HX711
+  if (scale_is_ready)
+    weight = scale.get_units();
+  
 }
 
 void setup() {

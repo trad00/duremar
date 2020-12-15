@@ -20,7 +20,7 @@ void onEncLeft(ESPRotary& rotary) {
   if (mode == CONFIG)
     config::onEncLeft(rotary);
   else {
-    main::nextPage();
+    main::prevPage();
   }
 }
 
@@ -28,7 +28,7 @@ void onEncRight(ESPRotary& rotary) {
   if (mode == CONFIG)
     config::onEncRight(rotary);
   else {
-    main::prevPage();
+    main::nextPage();
   }
 }
 
