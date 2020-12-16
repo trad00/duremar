@@ -39,7 +39,9 @@ void buttonPressed(Button2& btn) {
   }
   if (mode == CONFIG)
     config::buttonPressed(btn);
-  else {
+  else if (main::page == main::pageScale) {
+    main::scaleTare();
+  } else {
     mode = CONFIG;
     config::begin();
   }
@@ -95,7 +97,7 @@ void setup() {
   rotary.setRightRotationHandler(onEncRight);
   rotary.setLeftRotationHandler(onEncLeft);
 
-  config::setup(BUZZER, onConfigExit);
+  config::setup(BUZZER, onConfigExit, main::resetScale);
 
   main::setup();
   main::init();

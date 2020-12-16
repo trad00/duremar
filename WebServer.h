@@ -27,6 +27,10 @@ String fmtAlt(float val, int decPlc) {
   return fmtFloatValue(val, decPlc, " m");
 }
 
+String fmtWeight(float val, int decPlc) {
+  return fmtFloatValue(val, decPlc, " g");
+}
+
 void handleRoot() {
   if (!server.authenticate(WWWUSER, WWWPWD)) {
     return server.requestAuthentication();
@@ -47,6 +51,7 @@ void handleRoot() {
 <tr><td>T2</td><td id="t1">--</td></tr>
 <tr><td>T3</td><td id="t2">--</td></tr>
 <tr><td>T4</td><td id="t3">--</td></tr>
+<tr><td>Wt</td><td id="w0">--</td></tr>
 </table>
 <div>
   <div class="Rbtn" id="r0" onclick="bclk(0)">R1<div id="m0">--</div></div>
@@ -148,6 +153,8 @@ function update() {
           elem = document.getElementById("t"+i);
           elem.innerHTML = data[i];
         }
+        elem = document.getElementById("w0");
+        elem.innerHTML = data[12];
       } else {
         var elem;
         for (let i = 0; i < 4; i++) {
@@ -156,6 +163,8 @@ function update() {
           elem = document.getElementById("m"+i);
           elem.innerHTML = "--";
         }
+        elem = document.getElementById("w0");
+        elem.innerHTML = "--";
       }
     }
   };
@@ -180,6 +189,7 @@ void handleGetData() {
     json += "," + String(ra.STATUS());
     json += "," + String(ra.getMode());
   }
+  json += ",\"" + fmtWeight(main::readWeight(), 0) + "\"";
   json += "]";
   server.send(200, "text/plain", json);
 }

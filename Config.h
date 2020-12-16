@@ -18,6 +18,9 @@ uint8_t buzzerPin;
 typedef void OnConfigExitFunc();
 OnConfigExitFunc* onConfigExit;
 
+typedef void ResetScale(String);
+ResetScale* resetScale;
+
 //*****************
 //saved config data
 const int capacity = JSON_OBJECT_SIZE(300);
@@ -29,6 +32,9 @@ void initConfig() {
   conf["backlightOn"] = true;
   conf["wifiMode"] = AP;
   conf["normalPressure"] = 760;
+  conf["scaleOffset/1"] = 0;
+  conf["scaleScale/1"] = 0;
+  conf["scaleStandard/1"] = 0;
   
   conf["1/mode"] = rmOFF;
   conf["1/on/sensor"] = T1;
@@ -195,7 +201,6 @@ void MelodySelect(MenuItemBase* menuItem) {
   disp.DrawField(menuItem);
 }
 
-
 void BacklightSelect(MenuItemBase* menuItem) {
   conf["backlightOn"] = !conf["backlightOn"];
   disp.setBacklight(conf["backlightOn"]);
@@ -264,6 +269,11 @@ void OperSelect(MenuItemBase* menuItem) {
   disp.DrawField(menuItem);
 }
 
+void CalibrateScaleSelect(MenuItemBase* menuItem) {
+  ConfigItem* item = static_cast<ConfigItem*>(menuItem);
+  resetScale(item->dataPath);
+}
+
 
 bool adjustFieldMode = false;
 void (*adjustField)(bool);
@@ -295,11 +305,17 @@ void FloatDataSelect(MenuItemBase* menuItem) {
 }
 
 void adjustIntField(bool increase) {
-  int val = conf[adjustItem->dataPath];
-  if (increase)
-    val++;
+  bool fineAdjust = (millis() - lastAdjust) > 50;
+  lastAdjust = millis();
+
+  int adjStep;
+  if (fineAdjust)
+    adjStep = 1;
   else
-    val--;
+    adjStep = 100;
+
+  int val = conf[adjustItem->dataPath];
+  val += (increase ? adjStep : -adjStep);
   if (val > adjustItem->intMax)
     val = adjustItem->intMax;
   else if (val < adjustItem->intMin)
@@ -412,20 +428,36 @@ ConfigItem* newRelayItem(String title, String path) {
   return item;
 }
 
+ConfigItem* newScaleItem(String title, String path) {
+  ConfigItem* item = new ConfigItem(title);
+  item->subItems.push_back(new ConfigItem("<<BACK", true));
+  
+  ConfigItem* subItem = new ConfigItem("Standard", "scaleStandard/" + path, INT, IntDataSelect);
+  subItem->intMin = 0;
+  subItem->intMax = 10000;
+  item->subItems.push_back(subItem);
+  
+  item->subItems.push_back(new ConfigItem("Calibrate", path, NONE, CalibrateScaleSelect));
+  
+  return item;
+}
+
 void buildMenu(ConfigItem& menu) {
   menu.subItems.push_back(new ConfigItem("EXIT w/o save", ExitNoSaveSelect));
   menu.subItems.push_back(newRelayItem("RELAY 1", "1"));
   menu.subItems.push_back(newRelayItem("RELAY 2", "2"));
   menu.subItems.push_back(newRelayItem("RELAY 3", "3"));
   menu.subItems.push_back(newRelayItem("RELAY 4", "4"));
+  menu.subItems.push_back(newScaleItem("SCALE", "1"));
   menu.subItems.push_back(newSettingItem("SETTINGS"));
   menu.subItems.push_back(new ConfigItem("SAVE and exit", SaveExitSelect));
   menu.subItems.push_back(new ConfigItem("EXIT w/o save", ExitNoSaveSelect));
 }
 
-void setup(uint8_t buzPin, OnConfigExitFunc* onCfgExit) {
+void setup(uint8_t buzPin, OnConfigExitFunc* onCfgExit, ResetScale* rstScale) {
   buzzerPin = buzPin;
   onConfigExit = onCfgExit;
+  resetScale = rstScale;
 
   initConfig();
   loadConfig();

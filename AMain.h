@@ -22,13 +22,22 @@ MainDisplayPCF8574 disp;
 MainDisplaySSD1306 disp;
 #endif
 
-uint8_t page = 0;
+uint8_t pageTemp = 0;
+uint8_t pageScale = 1;
+uint8_t pageAtm = 2;
+uint8_t pageBegin = pageTemp;
+uint8_t pageEnd = pageAtm;
+uint8_t page = pageBegin;
+
 uint8_t pinSound;
 bool soundOn;
 bool bmpBegan;
 
 unsigned long lastUpdate = 0;
 unsigned long updateInterval = 5000;
+
+unsigned long lastUpdateScale = 0;
+unsigned long updateIntervalScale = 2000;
 
 unsigned long lastUpdateTimer = 0;
 unsigned long updateIntervalTimer = 1000;
@@ -51,8 +60,7 @@ float normP = 760;
 double atm_t = emptySignal;
 double atm_prs_mmHg = emptySignal;
 double bar_alt = emptySignal;
-float weight = 0;
-bool scale_is_ready = false;
+float weight = emptySignal;
 
 
 float getTempSensor(uint8_t tIndex) {
@@ -112,10 +120,10 @@ String fmtAlt(float val, int decPlc) {
 }
 
 String fmtWeight(float val, int decPlc) {
-  if (!scale_is_ready) {
+  if (val == emptySignal) {
     return "n/a";
   }
-  return fmtFloatValue(val, decPlc, " kg  ");
+  return fmtFloatValue(val, decPlc, " g   ");
 }
 
 BitsToShift bts;
@@ -348,7 +356,7 @@ void parameterSet1() {
 }
 
 void parameterSet2() {
-  _weight = roundFloat(weight, 1);
+  _weight = roundFloat(weight, 0);
 }
 
 bool parameterCompare0() {
@@ -368,14 +376,14 @@ bool parameterCompare1() {
 }
 
 bool parameterCompare2() {
-  return _weight != roundFloat(weight, 1);
+  return _weight != roundFloat(weight, 0);
 }
 
 void draw(bool redraw = false) {
   if (redraw)
     disp.clear();
     
-  if (page == 0) {
+  if (page == pageTemp) {
     if (redraw || parameterCompare0()) {
       disp.beginDraw();
       for (uint8_t i=0; i<4; i++) {
@@ -390,23 +398,23 @@ void draw(bool redraw = false) {
     }
   }
   
-  else if (page == 1) {
+  else if (page == pageAtm) {
     if (redraw || parameterCompare1()) {
       disp.beginDraw();
       String AtmT = fmtTemperature(atm_t, 1);
       String AtmP = fmtPressure(atm_prs_mmHg, 1);
       String Alt = fmtAlt(bar_alt, 1);
-      disp.drawPage1(AtmT, AtmP, Alt);
+      disp.drawPageAtm(AtmT, AtmP, Alt);
       disp.endDraw();
       parameterSet1();
     }
   }
   
-  else if (page == 2) {
+  else if (page == pageScale) {
     if (redraw || parameterCompare2()) {
       disp.beginDraw();
-      String Weight = fmtWeight(weight, 1);
-      disp.drawPage2(Weight);
+      String Weight = fmtWeight(weight, 0);
+      disp.drawPageScale(Weight);
       disp.endDraw();
       parameterSet2();
     }
@@ -414,8 +422,8 @@ void draw(bool redraw = false) {
 }
 
 void nextPage() {
-  if (page == 2)
-    page = 0;
+  if (page == pageEnd)
+    page = pageBegin;
   else
     page++;
   
@@ -424,8 +432,8 @@ void nextPage() {
 }
 
 void prevPage() {
-  if (page == 0)
-    page = 2;
+  if (page == pageBegin)
+    page = pageEnd;
   else
     page--;
 
@@ -468,12 +476,40 @@ void startAllSensors() {
   }
 
   //Scale HX711
-  scale.begin(SCALE_DATA, SCALE_CLOCK);
-//  scale.wait_ready(100);
-  scale_is_ready = scale.is_ready();
-//  if (scale_is_ready)
-//    scale.tare();
-  
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+  scale.set_scale(config::conf["scaleScale/1"]);
+  scale.set_offset(config::conf["scaleOffset/1"]);
+}
+
+float readWeight() {
+  if (scale.wait_ready_timeout(100)) {
+    weight = scale.get_units(10);
+//    if (weight < 0.0)
+//      weight = 0.0;
+  } else {
+    weight = emptySignal;
+  }
+}
+
+void resetScale(String dataPath) {
+  scale.set_scale();
+  float weight = readWeight();
+  if (weight != emptySignal) {
+    int standard = config::conf["scaleStandard/" + dataPath];
+    float newScale = weight / (float)standard;
+    config::conf["scaleScale/" + dataPath] = newScale;
+    scale.set_scale(newScale);
+  }
+}
+
+void scaleTare() {
+  if (scale.wait_ready_timeout(200)) {
+    scale.tare(10);
+    config::conf["scaleOffset/1"] = scale.get_offset();
+    config::saveConfig();
+    weight = scale.get_units(10);
+    draw(true);
+  }
 }
 
 void readAllSensors() {
@@ -491,9 +527,12 @@ void readAllSensors() {
   }
 
   //Scale HX711
-  if (scale_is_ready)
-    weight = scale.get_units();
-  
+  weight = readWeight();
+}
+
+void readScaleSensors() {
+  //Scale HX711
+  weight = readWeight();
 }
 
 void setup() {

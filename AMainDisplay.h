@@ -53,7 +53,7 @@ public:
     lcd.print(relOn ? "ON ": "OFF");
   }
   
-  void drawPage1(String AtmT, String AtmP, String Alt) {
+  void drawPageAtm(String AtmT, String AtmP, String Alt) {
     lcd.setCursor(0, 0);
     lcd.print("Atm T ");
     lcd.print(AtmT);
@@ -71,7 +71,7 @@ public:
     lcd.print(webServerIP);
   }
   
-  void drawPage2(String Weight) {
+  void drawPageScale(String Weight) {
     lcd.setCursor(0, 0);
     lcd.print("Weight ");
     lcd.print(Weight);
@@ -168,7 +168,7 @@ public:
       display.drawRect(120, i*16+2, 8, 12, SSD1306_WHITE);
   }
   
-  void drawPage1(String AtmT, String AtmP, String Alt) {
+  void drawPageAtm(String AtmT, String AtmP, String Alt) {
     display.setTextSize(1);
     
     display.setCursor(0, 0);
@@ -188,7 +188,7 @@ public:
     display.print(Alt);
   }
   
-  void drawPage2(String Weight) {
+  void drawPageScale(String Weight) {
     display.setTextSize(1);
     
     display.setCursor(0, 0);
