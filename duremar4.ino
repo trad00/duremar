@@ -75,14 +75,6 @@ void setup() {
   Serial.begin(115200);
   Serial.println();
 
-//  pinMode(RELAY1, OUTPUT);
-//  pinMode(RELAY2, OUTPUT);
-//  pinMode(RELAY3, OUTPUT);
-//  pinMode(RELAY4, OUTPUT);
-//  digitalWrite(RELAY1, REL_OFF);
-//  digitalWrite(RELAY2, REL_OFF);
-//  digitalWrite(RELAY3, REL_OFF);
-//  digitalWrite(RELAY4, REL_OFF);
   pinMode(DATA_PIN, OUTPUT);
   pinMode(CLOCK_PIN, OUTPUT);
   pinMode(LATCH_PIN, OUTPUT);
