@@ -40,7 +40,9 @@ void buttonPressed(Button2& btn) {
   if (mode == CONFIG)
     config::buttonPressed(btn);
   else if (main::page == main::pageScale) {
-    main::scaleTare();
+    scale::scaleTare();
+    main::doSound(1000, 15);
+    main::draw(true);
   } else {
     mode = CONFIG;
     config::begin();
@@ -89,7 +91,7 @@ void setup() {
   rotary.setRightRotationHandler(onEncRight);
   rotary.setLeftRotationHandler(onEncLeft);
 
-  config::setup(BUZZER, onConfigExit, main::resetScale);
+  config::setup(BUZZER, onConfigExit, scale::resetScale);
 
   main::setup();
   main::init();

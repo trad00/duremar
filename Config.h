@@ -23,7 +23,7 @@ ResetScale* resetScale;
 
 //*****************
 //saved config data
-const int capacity = JSON_OBJECT_SIZE(300);
+const int capacity = JSON_OBJECT_SIZE(1000);
 StaticJsonDocument<capacity> conf;
 
 void initConfig() {
@@ -272,6 +272,7 @@ void OperSelect(MenuItemBase* menuItem) {
 void CalibrateScaleSelect(MenuItemBase* menuItem) {
   ConfigItem* item = static_cast<ConfigItem*>(menuItem);
   resetScale(item->dataPath);
+  nav.doSound(1000, 15);
 }
 
 
@@ -282,7 +283,7 @@ ConfigItem* adjustItem;
 unsigned long lastAdjust = 0;
 
 void adjustFloatField(bool increase) {
-  bool fineAdjust = (millis() - lastAdjust) > 50;
+  bool fineAdjust = (millis() - lastAdjust) > 35;
   lastAdjust = millis();
   
   float adjStep;
@@ -305,7 +306,7 @@ void FloatDataSelect(MenuItemBase* menuItem) {
 }
 
 void adjustIntField(bool increase) {
-  bool fineAdjust = (millis() - lastAdjust) > 50;
+  bool fineAdjust = (millis() - lastAdjust) > 35;
   lastAdjust = millis();
 
   int adjStep;

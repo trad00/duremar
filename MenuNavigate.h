@@ -49,13 +49,13 @@ class MenuNavigate {
     void down();
     void select();
     void setSound(uint8_t pin,bool on);
+    inline void doSound(uint16_t frequency, uint16_t duration);
     
   private:
     void menuDraw(bool redraw);
     void menuEnter(MenuItemBase* menu);
     void menuExit();
     void updateMenuPos();
-    inline void doSound(uint16_t frequency, uint16_t duration);
     inline void moveSound()  { doSound(100,  5); };
     inline void enterSound() { doSound(1000,15); };
     inline void exitSound()  { doSound(800, 15); };
@@ -86,7 +86,7 @@ void MenuNavigate::begin() {
 
 void MenuNavigate::setSound(uint8_t pin, bool on) {
   pinSound = pin;
-  soundOn = pinSound >= 0 && on;
+  soundOn = on;
 };
 
 void MenuNavigate::doSound(uint16_t frequency, uint16_t duration) {

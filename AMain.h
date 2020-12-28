@@ -4,17 +4,16 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <Adafruit_BMP280.h>
-#include "HX711.h"
 
 #include "AMainDisplay.h"
 #include "BitsToShift.h"
+#include "Scale.h"
 
 namespace main {
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 Adafruit_BMP280 bmp;
-HX711 scale;
 
 #ifdef LCD
 MainDisplayPCF8574 disp;
@@ -29,7 +28,6 @@ uint8_t pageBegin = pageTemp;
 uint8_t pageEnd = pageAtm;
 uint8_t page = pageBegin;
 
-uint8_t pinSound;
 bool soundOn;
 bool bmpBegan;
 
@@ -37,7 +35,7 @@ unsigned long lastUpdate = 0;
 unsigned long updateInterval = 5000;
 
 unsigned long lastUpdateScale = 0;
-unsigned long updateIntervalScale = 2000;
+unsigned long updateIntervalScale = 500;
 
 unsigned long lastUpdateTimer = 0;
 unsigned long updateIntervalTimer = 1000;
@@ -76,13 +74,12 @@ float getTempSensor(uint8_t tIndex) {
 }
 
 void setSound(uint8_t pin, bool on) {
-  pinSound = pin;
-  soundOn = pinSound >= 0 && on;
+  soundOn = on;
 };
 
 void doSound(uint16_t frequency, uint16_t duration) {
   if (soundOn)
-    tone(pinSound, frequency, duration);
+    tone(BUZZER, frequency, duration);
 }
 
 float roundFloat(float f, int prec) {
@@ -120,9 +117,6 @@ String fmtAlt(float val, int decPlc) {
 }
 
 String fmtWeight(float val, int decPlc) {
-  if (val == emptySignal) {
-    return "n/a";
-  }
   return fmtFloatValue(val, decPlc, " g   ");
 }
 
@@ -475,44 +469,10 @@ void startAllSensors() {
     );
   }
 
-  //Scale HX711
-  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
-  scale.set_scale(config::conf["scaleScale/1"]);
-  scale.set_offset(config::conf["scaleOffset/1"]);
+  scale::start();
 }
 
-float readWeight() {
-  if (scale.wait_ready_timeout(100)) {
-    weight = scale.get_units(10);
-//    if (weight < 0.0)
-//      weight = 0.0;
-  } else {
-    weight = emptySignal;
-  }
-}
-
-void resetScale(String dataPath) {
-  scale.set_scale();
-  float weight = readWeight();
-  if (weight != emptySignal) {
-    int standard = config::conf["scaleStandard/" + dataPath];
-    float newScale = weight / (float)standard;
-    config::conf["scaleScale/" + dataPath] = newScale;
-    scale.set_scale(newScale);
-  }
-}
-
-void scaleTare() {
-  if (scale.wait_ready_timeout(200)) {
-    scale.tare(10);
-    config::conf["scaleOffset/1"] = scale.get_offset();
-    config::saveConfig();
-    weight = scale.get_units(10);
-    draw(true);
-  }
-}
-
-void readAllSensors() {
+void readSensors() {
   //DS18B20
   sensors.requestTemperatures(); 
   for (uint8_t i=0; i<4; i++)
@@ -525,14 +485,11 @@ void readAllSensors() {
     atm_prs_mmHg = atm_prs_Pa * 0.00750062; // Pa to mmHg
     bar_alt = bmp.readAltitude(BMP_PRESSURE0);
   }
-
-  //Scale HX711
-  weight = readWeight();
+  weight = scale::readWeight();
 }
 
 void readScaleSensors() {
-  //Scale HX711
-  weight = readWeight();
+  weight = scale::readWeight();
 }
 
 void setup() {
@@ -557,7 +514,7 @@ void init() {
 }
 
 void begin() {
-  readAllSensors();
+  readSensors();
   actuate();
 }
 
@@ -568,9 +525,14 @@ void loop() {
   }
   if ((millis() - lastUpdate >= updateInterval) || lastUpdate == 0) {
     lastUpdate = millis();
-    readAllSensors();
+    lastUpdateScale = lastUpdate;
+    readSensors();
     actuate();
+  } else if ((millis() - lastUpdateScale >= updateIntervalScale) || lastUpdateScale == 0) {
+    lastUpdateScale = millis();
+    readScaleSensors();
   }
+  
   if (alarm) {
     if ((millis() - lastAlarmTimer >= alarmIntervalTimer) || lastAlarmTimer == 0) {
       lastAlarmTimer = millis();

@@ -189,7 +189,7 @@ void handleGetData() {
     json += "," + String(ra.STATUS());
     json += "," + String(ra.getMode());
   }
-  json += ",\"" + fmtWeight(main::readWeight(), 0) + "\"";
+  json += ",\"" + fmtWeight(scale::readWeight(), 0) + "\"";
   json += "]";
   server.send(200, "text/plain", json);
 }

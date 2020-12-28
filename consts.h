@@ -1,6 +1,6 @@
-#define VER "v.2020/12/16"
+#define VER "v.2020/12/29"
 
-//#define LCD
+#define LCD
 #define OLED
 
 
@@ -42,7 +42,7 @@
 #define BMP_SCL_BUS D1
 #define BMP_SDA_BUS D2
 #define BMP_PRESSURE0 1013.25
-#define DS18_RESOLUTION 11 
+#define DS18_RESOLUTION 10 
 //The resolution of the temperature sensor is user-configurable to 9, 10, 11, or 12 bits,
 //corresponding to increments of 0.5°C, 0.25°C, 0.125°C, and 0.0625°C, respectively. 
 
