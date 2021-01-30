@@ -50,6 +50,7 @@ double _atm_prs_mmHg;
 double _bar_alt;
 bool _rOn[4];
 float _weight;
+float _volume;
 
 float temps[4] = {emptySignal,emptySignal,emptySignal,emptySignal};
 float clbTemps[4] = {0,0,0,0};
@@ -58,7 +59,9 @@ float normP = 760;
 double atm_t = emptySignal;
 double atm_prs_mmHg = emptySignal;
 double bar_alt = emptySignal;
+
 float weight = emptySignal;
+float volume = emptySignal;
 
 
 float getTempSensor(uint8_t tIndex) {
@@ -118,6 +121,10 @@ String fmtAlt(float val, int decPlc) {
 
 String fmtWeight(float val, int decPlc) {
   return fmtFloatValue(val, decPlc, " g   ");
+}
+
+String fmtVolume(float val, int decPlc) {
+  return fmtFloatValue(val, decPlc, " ml  ");
 }
 
 BitsToShift bts;
@@ -351,6 +358,7 @@ void parameterSet1() {
 
 void parameterSet2() {
   _weight = roundFloat(weight, 0);
+  _volume = roundFloat(volume, 0);
 }
 
 bool parameterCompare0() {
@@ -370,7 +378,7 @@ bool parameterCompare1() {
 }
 
 bool parameterCompare2() {
-  return _weight != roundFloat(weight, 0);
+  return _weight != roundFloat(weight, 0) || _volume != roundFloat(volume, 0);
 }
 
 void draw(bool redraw = false) {
@@ -408,7 +416,8 @@ void draw(bool redraw = false) {
     if (redraw || parameterCompare2()) {
       disp.beginDraw();
       String Weight = fmtWeight(weight, 0);
-      disp.drawPageScale(Weight);
+      String Volume = fmtVolume(volume, 0);
+      disp.drawPageScale(Weight, Volume);
       disp.endDraw();
       parameterSet2();
     }
@@ -485,11 +494,11 @@ void readSensors() {
     atm_prs_mmHg = atm_prs_Pa * 0.00750062; // Pa to mmHg
     bar_alt = bmp.readAltitude(BMP_PRESSURE0);
   }
-  weight = scale::readWeight();
+  weight = scale::readWeight(volume);
 }
 
 void readScaleSensors() {
-  weight = scale::readWeight();
+  weight = scale::readWeight(volume);
 }
 
 void setup() {
@@ -503,6 +512,7 @@ void init() {
   setSound(BUZZER, config::conf["soundOn"]);
 
   normP = config::conf["normalPressure"];
+  scale::density = config::conf["scaleDensity/1"];
   
   for (uint8_t i=0; i<4; i++) {
     clbTemps[i] = config::conf["calibrate/T" + String(i+1)];

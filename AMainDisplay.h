@@ -71,10 +71,12 @@ public:
     lcd.print(webServerIP);
   }
   
-  void drawPageScale(String Weight) {
+  void drawPageScale(String Weight, String Volume) {
     lcd.setCursor(0, 0);
     lcd.print("Weight ");
     lcd.print(Weight);
+    lcd.print("Volume ");
+    lcd.print(Volume);
   }
   
   void welcome() {
@@ -188,12 +190,16 @@ public:
     display.print(Alt);
   }
   
-  void drawPageScale(String Weight) {
+  void drawPageScale(String Weight, String Volume) {
     display.setTextSize(1);
     
     display.setCursor(0, 0);
     display.print("Weight: ");
     display.print(Weight);
+
+    display.setCursor(0, 16);
+    display.print("Volume: ");
+    display.print(Volume);
   }
   
   void welcome() {

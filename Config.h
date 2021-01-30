@@ -35,6 +35,7 @@ void initConfig() {
   conf["scaleOffset/1"] = 0;
   conf["scaleScale/1"] = 0;
   conf["scaleStandard/1"] = 0;
+  conf["scaleDensity/1"] = 1000;
   
   conf["1/mode"] = rmOFF;
   conf["1/on/sensor"] = T1;
@@ -317,10 +318,13 @@ void adjustIntField(bool increase) {
 
   int val = conf[adjustItem->dataPath];
   val += (increase ? adjStep : -adjStep);
-  if (val > adjustItem->intMax)
-    val = adjustItem->intMax;
-  else if (val < adjustItem->intMin)
-    val = adjustItem->intMin;
+
+  if (adjustItem->intMax != adjustItem->intMin)
+    if (val > adjustItem->intMax)
+      val = adjustItem->intMax;
+    else if (val < adjustItem->intMin)
+      val = adjustItem->intMin;
+      
   conf[adjustItem->dataPath] = val;
   disp.DrawField(adjustItem, true);
 }
@@ -432,8 +436,13 @@ ConfigItem* newRelayItem(String title, String path) {
 ConfigItem* newScaleItem(String title, String path) {
   ConfigItem* item = new ConfigItem(title);
   item->subItems.push_back(new ConfigItem("<<BACK", true));
+
+  ConfigItem* subItem = new ConfigItem("Density", "scaleDensity/" + path, INT, IntDataSelect);
+  subItem->intMin = 0;
+  subItem->intMax = 100000;
+  item->subItems.push_back(subItem);
   
-  ConfigItem* subItem = new ConfigItem("Standard", "scaleStandard/" + path, INT, IntDataSelect);
+  subItem = new ConfigItem("Standard", "scaleStandard/" + path, INT, IntDataSelect);
   subItem->intMin = 0;
   subItem->intMax = 10000;
   item->subItems.push_back(subItem);

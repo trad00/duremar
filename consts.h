@@ -1,12 +1,27 @@
-#define VER "v.2020/12/29"
-
-#define LCD
-//#define OLED
+#define VER "v.2021/01/30"
+#define PRODUCT
 
 
 #define TX 1
 #define RX 3
 #define SK 10
+
+
+#ifdef PRODUCT
+  #define LCD
+  //енкодер
+  #define ENC_BTN D3
+  #define ENC_A TX
+  #define ENC_B RX
+#else
+  #define BREAD_BOARD
+  #define OLED
+  //енкодер
+  #define ENC_BTN D3
+  #define ENC_A D5
+  #define ENC_B D6
+#endif
+
 
 
 //зумер
@@ -16,13 +31,6 @@
 //SCL, SDA - стандартные D1, D2
 #define LCD_DSPL_ADDR 0x27
 #define OLED_DSPL_ADDR 0x3C
-
-//енкодер
-#define ENC_BTN D3
-//#define ENC_A D5
-//#define ENC_B D6
-#define ENC_A TX
-#define ENC_B RX
 
 //управление реле
 //#define RELAY1 D5
